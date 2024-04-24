@@ -258,7 +258,7 @@ static char _yini_get_char(yini_t *ini) {
 	} else {
 		// YINI_FILE || YINI_STREAM
 		if (feof(ini->input.stream) ||
-		    (c = fgetc(ini->input.stream)) == EOF) {
+		    (c = fgetc(ini->input.stream)) == (char)EOF) {
 			ini->parse_end = true;
 			if (ini->input_type == YINI_FILE) {
 				fclose(ini->input.stream);

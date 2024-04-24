@@ -26,7 +26,7 @@ typedef struct {
 /* ************ FUNCTIONS ************* */
 
 /* Create a new yarray of the default size. */
-yarray_t yarray_new() {
+yarray_t yarray_new(void) {
 	return (yarray_create(_YARRAY_DEFAULT_SIZE));
 }
 /* Creates a new yarray of the given size. */

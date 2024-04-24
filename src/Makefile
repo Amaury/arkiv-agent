@@ -4,13 +4,13 @@
 
 # Executable names
 NAME			= agent
-NAME_LINUX_X86_32	= agent_linux-i386
-NAME_LINUX_X86_64	= agent_linux-x86_64
-NAME_LINUX_ARM_32	= agent_linux-arm_32
-NAME_LINUX_ARM_64	= agent_linux-arm_64
-NAME_LINUX_RISCV_64	= agent_linux-riscv_64
-NAME_MACOS_X86_64	= agent_macos-x86_64
-NAME_MACOS_ARM_64	= agent_macos-arm_64
+NAME_LINUX_X86_32	= agent-linux-i386
+NAME_LINUX_X86_64	= agent-linux-x86_64
+NAME_LINUX_ARM_32	= agent-linux-arm_32
+NAME_LINUX_ARM_64	= agent-linux-arm_64
+NAME_LINUX_RISCV_64	= agent-linux-riscv_64
+NAME_MACOS_X86_64	= agent-macos-x86_64
+NAME_MACOS_ARM_64	= agent-macos-arm_64
 
 # Source files
 SRC	=	main.c		\
@@ -79,45 +79,45 @@ dev: CFLAGS=$(CFLAGS_DEV)
 dev: $(NAME)
 
 # static linking, Linux i386
-NAME_LINUX_X86_32: CC=$(CC_LINUX_X86_32)
+$(NAME_LINUX_X86_32): CC=$(CC_LINUX_X86_32)
 
-NAME_LINUX_X86_32: $(NAME)
+$(NAME_LINUX_X86_32): $(NAME)
 	mv $(NAME) $(NAME_LINUX_X86_32)
 
 # static linking, Linux x86_64
-NAME_LINUX_X86_64: CC=$(CC_LINUX_X86_64)
+$(NAME_LINUX_X86_64): CC=$(CC_LINUX_X86_64)
 
-NAME_LINUX_X86_64: $(NAME)
+$(NAME_LINUX_X86_64): $(NAME)
 	mv $(NAME) $(NAME_LINUX_X86_64)
 
 # static linking, Linux ARM 32
-NAME_LINUX_ARM_32: CC=$(CC_LINUX_ARM_32)
+$(NAME_LINUX_ARM_32): CC=$(CC_LINUX_ARM_32)
 
-NAME_LINUX_ARM_32: $(NAME)
+$(NAME_LINUX_ARM_32): $(NAME)
 	mv $(NAME) $(NAME_LINUX_ARM_32)
 
 # static linking, Linux ARM 64
-NAME_LINUX_ARM_64: CC=$(CC_LINUX_ARM_64)
+$(NAME_LINUX_ARM_64): CC=$(CC_LINUX_ARM_64)
 
-NAME_LINUX_ARM_64: $(NAME)
+$(NAME_LINUX_ARM_64): $(NAME)
 	mv $(NAME) $(NAME_LINUX_ARM_64)
 
 # static linking, Linux RISC-V 64
-NAME_LINUX_RISCV_64: CC=$(CC_LINUX_RISCV_64)
+$(NAME_LINUX_RISCV_64): CC=$(CC_LINUX_RISCV_64)
 
-NAME_LINUX_RISCV_64: $(NAME)
+$(NAME_LINUX_RISCV_64): $(NAME)
 	mv $(NAME) $(NAME_LINUX_RISCV_64)
 
 # static linking, MacOS x86_64
-NAME_MACOS_X86_64: CC=$(CC_MACOS_X86_64)
+$(NAME_MACOS_X86_64): CC=$(CC_MACOS_X86_64)
 
-NAME_MACOS_X86-64: $(NAME)
+$(NAME_MACOS_X86_64): $(NAME)
 	mv $(NAME) $(NAME_MACOS_X86_64)
 
 # static linking, MacOS ARM 64
-NAME_MACOS_ARM_64: CC=$(CC_MACOS_ARM_64)
+$(NAME_MACOS_ARM_64): CC=$(CC_MACOS_ARM_64)
 
-NAME_MACOS_ARM_64: $(NAME)
+$(NAME_MACOS_ARM_64): $(NAME)
 	mv $(NAME) $(NAME_MACOS_ARM_64)
 
 # cleaning
