@@ -26,6 +26,8 @@
 
 /* Checks if the tar program is installed. */
 static void _config_check_tar(void);
+/* Checks if the sha512sum program is installed. */
+static void _config_check_sha512sum(void);
 /* Checks if copmression programs are installed. */
 static void _config_check_z(void);
 /* Checks if encryption programs are installed. */
@@ -66,7 +68,7 @@ bool _config_declare_server(const char *orgKey, const char *hostname) {
 	return (false);
 }
 /* Main function for configuration file generation. */
-void exec_configuration() {
+void exec_configuration(void) {
 	ystr_t orgKey = NULL;
 	ystr_t hostname = NULL;
 	ystr_t backupPath = NULL;
@@ -82,6 +84,8 @@ void exec_configuration() {
 	/* programs check */
 	// tar
 	_config_check_tar();
+	// msha512sum
+	_config_check_sha512sum();
 	// compression programs
 	_config_check_z();
 	// encryption programs
@@ -160,14 +164,29 @@ ystr_t config_get_program_path(const char *binName) {
  * @function	_config_check_tar
  * @abstract	Checks if the tar program is installed. Aborts if not.
  */
-static void _config_check_tar() {
+static void _config_check_tar(void) {
 	if (config_program_exists("tar"))
 		return;
 	printf(YANSI_RED "Unable to find 'tar' program on this server.\n\n" YANSI_RESET);
 	printf("Please, install " YANSI_GOLD "tar" YANSI_RESET " in a standard location ("
 	       YANSI_PURPLE "/bin/tar" YANSI_RESET ", " YANSI_PURPLE "/usr/bin/tar" YANSI_RESET " or "
 	       YANSI_PURPLE "/usr/local/bin/tar" YANSI_RESET ") and try again.\n");
-	printf(YANSI_FAINT "See " YANSI_LINK " for more information.\n\n" YANSI_RESET, "https://doc.arkiv.sh/tar", "the documentation");
+	printf(YANSI_FAINT "See " YANSI_LINK " for more information.\n\n" YANSI_RESET, "https://doc.arkiv.sh/agent/install", "the documentation");
+	printf(YANSI_RED "Abort\n" YANSI_RESET);
+	exit(1);
+}
+/**
+ * @function	_config_check_sh256sum
+ * @abstract	Checks if the sha512sum program is installed. Aborts if not.
+ */
+static void _config_check_sha512sum(void) {
+	if (config_program_exists("sha512sum"))
+		return;
+	printf(YANSI_RED "Unable to find 'sha512sum' program on this server.\n\n" YANSI_RESET);
+	printf("Please, install " YANSI_GOLD "sha512sum" YANSI_RESET " in a standard location ("
+	       YANSI_PURPLE "/bin/sha512sum" YANSI_RESET ", " YANSI_PURPLE "/usr/bin/sha512sum" YANSI_RESET " or "
+	       YANSI_PURPLE "/usr/local/bin/sha512sum" YANSI_RESET ") and try again.\n");
+	printf(YANSI_FAINT "See " YANSI_LINK " for more information.\n\n" YANSI_RESET, "https://doc.arkiv.sh/agent/install", "the documentation");
 	printf(YANSI_RED "Abort\n" YANSI_RESET);
 	exit(1);
 }
@@ -175,7 +194,7 @@ static void _config_check_tar() {
  * @header	_config_check_z
  * @abstract	Checks if compression programs are installed.
  */
-static void _config_check_z() {
+static void _config_check_z(void) {
 	bool hasGzip = (config_program_exists("gzip") && config_program_exists("gunzip")) ? true : false;
 	bool hasBzip2 = (config_program_exists("bzip2") && config_program_exists("bunzip2")) ? true : false;
 	bool hasXz = (config_program_exists("xz") && config_program_exists("unxz")) ? true : false;
@@ -215,7 +234,7 @@ static void _config_check_z() {
  * @function	_config_check_crypt
  * @abstract	Checks if encryption programs are installed.
  */
-static void _config_check_crypt() {
+static void _config_check_crypt(void) {
 	bool hasOpenssl = config_program_exists("openssl");
 	bool hasScrypt = config_program_exists("scrypt");
 	bool hasGpg = config_program_exists("gpg");
@@ -252,7 +271,7 @@ static void _config_check_crypt() {
  * @function	_config_check_web
  * @abstract	Checks if web communication programs are installed.
  */
-static void _config_check_web() {
+static void _config_check_web(void) {
 	bool hasWget = config_program_exists("wget");
 	bool hasCurl = config_program_exists("curl");
 	if (hasWget || hasCurl)
@@ -269,7 +288,7 @@ static void _config_check_web() {
  * @abstract	Asks for the organization key.
  * @return	The key. Must be freed.
  */
-static ystr_t _config_ask_orgkey() {
+static ystr_t _config_ask_orgkey(void) {
 	ystr_t ys = NULL;
 
 	for (; ; ) {
@@ -287,7 +306,7 @@ static ystr_t _config_ask_orgkey() {
  * @abstract	Asks for the hostname.
  * @return	The hostname.
  */
-static ystr_t _config_ask_hostname() {
+static ystr_t _config_ask_hostname(void) {
 	ystr_t hostname = NULL;
 	ystr_t ys = NULL;
 
@@ -321,7 +340,7 @@ static ystr_t _config_ask_hostname() {
  * @abstract	Asks for the backup path.
  * @return	The backup path.
  */
-static ystr_t _config_ask_backup_path() {
+static ystr_t _config_ask_backup_path(void) {
 	ystr_t ys = NULL;
 
 	printf("Path to the local backup directory? [" YANSI_YELLOW _DEFAULT_BACKUP_PATH YANSI_RESET "]\n" YANSI_BLUE);
@@ -338,7 +357,7 @@ static ystr_t _config_ask_backup_path() {
  * @abstract	Asks for the encryption password.
  * @return	The encryption password.
  */
-static ystr_t _config_ask_encryption_password() {
+static ystr_t _config_ask_encryption_password(void) {
 	ystr_t ys = NULL;
 
 	for (; ; ) {

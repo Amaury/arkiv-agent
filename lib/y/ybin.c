@@ -1,7 +1,7 @@
 #include "y.h"
 
 /* Create a new ybin. */
-ybin_t *ybin_new() {
+ybin_t *ybin_new(void) {
 	ybin_t *bin = malloc0(sizeof(ybin_t));
 	return (bin);
 }

@@ -1,4 +1,22 @@
-.PHONY: all clean arkiv-agent lib src dist
+.PHONY: help all clean arkiv-agent lib src linux-x86_32 linux-x86_64 linux-arm_32 linux-arm_64 linux-riscv_64 macos-x86_64 macos-arm_64 dist
+
+help:
+	@echo "$$(tput bold)General$$(tput sgr0)"
+	@echo "make clean            $$(tput dim)Delete all compiled files.$$(tput sgr0)"
+	@echo
+	@echo "$$(tput bold)Dynamic linking$$(tput sgr0)"
+	@echo "make lib              $$(tput dim)Compile libraries.$$(tput sgr0)"
+	@echo "make src              $$(tput dim)Compile agent.$$(tput sgr0)"
+	@echo "make all              $$(tput dim)Delete files and compile libraries and agent.$$(tput sgr0)"
+	@echo
+	@echo "$$(tput bold)Static linking$$(tput sgr0)"
+	@echo "make linux-x86_32     $$(tput dim)Compile for Linux on x86_32.$$(tput sgr0)"
+	@echo "make linux-x86_64     $$(tput dim)Compile for Linux on x86_64.$$(tput sgr0)"
+	@echo "make linux-arm_32     $$(tput dim)Compile for Linux on ARM 32.$$(tput sgr0)"
+	@echo "make linux-arm-64     $$(tput dim)Compile for Linux on ARM 64.$$(tput sgr0)"
+	@echo "make linux-riscv_64   $$(tput dim)Compile for Linux on RISC-V 64.$$(tput sgr0)"
+	@echo "make macos-x86_64     $$(tput dim)Compile for MacOS on x86_64.$$(tput sgr0)"
+	@echo "make macos-arm_64     $$(tput dim)Compile for MacOS on ARM 64.$$(tput sgr0)"
 
 arkiv-agent: lib src dist
 
@@ -15,6 +33,34 @@ lib:
 
 src:
 	cd src; make
+
+linux-x86_32: clean
+	cd lib; make linux-x86_32
+	cd src; make linux-x86_32
+
+linux-x86_64: clean
+	cd lib; make linux-x86_64
+	cd src; make linux-x86_64
+
+linux-arm_32: clean
+	cd lib; make linux-arm_32
+	cd src; make linux-arm_32
+
+linux-arm_64: clean
+	cd lib; make linux-arm_64
+	cd src; make linux-arm_64
+
+linux-riscv_64: clean
+	cd lib; make linux-riscv_64
+	cd src; make linux-riscv_64
+
+macos-x86_64: clean
+	cd lib; make macos-x86_64
+	cd src; make macos-x86_64
+
+macos-arm_64: clean
+	cd lib; make macos-arm_64
+	cd src; make macos-arm_64
 
 dist:
 	rm -f dist/*

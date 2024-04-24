@@ -149,6 +149,8 @@ void yhashmap_add(yhashmap_t *hashmap, char *key, void *data) {
 	// update the hash map
 	hashmap->used++;
 
+	/* unused code ? */
+	/*
 	int total = 0;
 	for (size_t i = 0; i < yarray_size(hashmap->buckets); ++i) {
 		yarray_t bucket = hashmap->buckets[i];
@@ -159,6 +161,7 @@ void yhashmap_add(yhashmap_t *hashmap, char *key, void *data) {
 				total++;
 		}
 	}
+	*/
 }
 /* Search an element in an hash map, and returns its value. */
 void *yhashmap_search(yhashmap_t *hashmap, const char *key) {

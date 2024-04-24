@@ -51,7 +51,7 @@ void yexcept_disable(void) {
 	__g_yexception.disabled = true;
 }
 /* Write the stack trace to stderr. */
-void yexcept_stack_trace() {
+void yexcept_stack_trace(void) {
 	fprintf(stderr, "STACK TRACE:\n");
 	size_t i;
 	if (!__g_yexception.stack || !(i = yarray_length(__g_yexception.stack))) {
@@ -105,7 +105,7 @@ void _yexcept_throw(char *msg, int code, char *filename, int line) {
 	}
 }
 /* Process an uncatched exception. */
-void _yexcept_process_uncatched() {
+void _yexcept_process_uncatched(void) {
 	_yexcept_stack_t *elem = yarray_pop(__g_yexception.stack);
 	if (!elem)
 		return;
@@ -141,7 +141,7 @@ bool _yexcept_catch(int code) {
 	return (true);
 }
 /* Tell if an exception has been created, but not raised nor catched. */
-bool _yexcept_is_created() {
+bool _yexcept_is_created(void) {
 	_yexcept_stack_t *elem = yarray_get_last(__g_yexception.stack);
 	if (!elem || elem->status != YEXCEPT_CREATED)
 		return (false);

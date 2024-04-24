@@ -51,7 +51,7 @@ typedef struct {
 } yini_element_t;
 
 /* Create an INI parser object. */
-yini_t *yini_new() {
+yini_t *yini_new(void) {
 	yini_t *ini = malloc0(sizeof(yini_t));
 	return (ini);
 }

@@ -6,6 +6,7 @@
 #include "yexec.h"
 #include "configuration.h"
 #include "api.h"
+#include "agent.h"
 
 /** @define _ARKIV_USER_AGENT	User-agent of the arkiv agent. */
 #define	_ARKIV_USER_AGENT	"Arkiv/1.0"
@@ -24,19 +25,28 @@ ystatus_t _api_url_add_param(uint64_t hash, char *key, void *data, void *user_da
 /* ********** PUBLIC FUNCTIONS ********** */
 /* Declare the current server to arkiv.sh. */
 ystatus_t api_server_declare(const char *hostname, const char *orgKey) {
+	ystatus_t st = YENOMEM;
+	ystr_t agentVersion = NULL;
 	yvar_t var = {0};
-
-	yres_var_t res = _api_call(_ARKIV_URL_DECLARE, hostname, orgKey, NULL, true);
-	ystatus_t st = YRES_STATUS(res);
+	// GET parameter
+	ytable_t *params = ytable_create(1, NULL, NULL);
+	if (!params)
+		goto cleanup;
+	ys_printf(&agentVersion, "%f", A_AGENT_VERSION);
+	ytable_set_key(params, "version", agentVersion);
+	// API call
+	yres_var_t res = _api_call(A_API_URL_SERVER_DECLARE, hostname, orgKey, params, true);
+	st = YRES_STATUS(res);
 	var = YRES_VAL(res);
 	if (st != YENOERR)
 		goto cleanup;
-	var = YRES_VAL(res);
 	if (!yvar_isset(&var) || !yvar_is_bool(&var) || !yvar_get_bool(&var)) {
 		st = YEUNDEF;
 		goto cleanup;
 	}
 cleanup:
+	ys_free(agentVersion);
+	ytable_free(params);
 	yvar_delete(&var);
 	return (st);
 }

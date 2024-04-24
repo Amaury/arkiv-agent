@@ -11,6 +11,7 @@ extern "C" {
 #endif /* __cplusplus || c_plusplus */
 
 #include <stdbool.h>
+#include <stdint.h>
 #include "ybin.h"
 
 /* ********** MACROS DEFINTIONS ********** */

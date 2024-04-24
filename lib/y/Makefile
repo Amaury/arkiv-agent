@@ -12,10 +12,6 @@ SRC =		yarray.c	\
 		yexec.c		\
 		ybase64.c	\
 		ybin.c		\
-		ycgi.c		\
-		ydaemon.c	\
-		ydom.c		\
-		ydom_xpath.c	\
 		yexception.c	\
 		yfile.c		\
 		yhash.c		\
@@ -27,8 +23,6 @@ SRC =		yarray.c	\
 		ylock.c		\
 		ylog.c		\
 		ymemory.c	\
-		yqprintable.c	\
-		ysax.c		\
 		ystr.c		\
 		ytable.c	\
 		ytimer.c	\
@@ -45,10 +39,7 @@ INCLUDES =	y.h		\
 		yansi.h		\
 		ybase64.h	\
 		ybin.h		\
-		ycgi.h		\
-		ydaemon.h	\
 		ydefs.h		\
-		ydom.h		\
 		yexception.h	\
 		yfile.h		\
 		yhash.h		\
@@ -60,9 +51,7 @@ INCLUDES =	y.h		\
 		ylock.h		\
 		ylog.h		\
 		ymemory.h	\
-		yqprintable.h	\
 		yresult.h	\
-		ysax.h		\
 		ystatus.h	\
 		ystr.h		\
 		ytable.h	\
@@ -83,7 +72,16 @@ EXEOPT  =       -O3 # -g for debug
 
 # #####################################################################
 
-CC      =	gcc
+CC		  = gcc
+ZIG		  = zig
+CC_LINUX_X86_32	  = $(ZIG) cc -target x86-linux-musl
+CC_LINUX_X86_64	  = $(ZIG) cc -target x86_64-linux-musl
+CC_LINUX_ARM_32	  = $(ZIG) cc -target arm-linux-musleabi
+CC_LINUX_ARM_64	  = $(ZIG) cc -target aarch64-linux-musl
+CC_LINUX_RISCV_64 = $(ZIG) cc -target riscv64-linux-musl
+CC_MACOS_X86_64	  = $(ZIG) cc -target x86_64-macos-none
+CC_MACOS_ARM_64	  = $(ZIG) cc -target aarch64-macos-none
+
 OBJS    =	$(SRC:.c=.o)
 
 # Objects compilation options
@@ -94,11 +92,39 @@ LDFLAGS	= -shared -Wl,-soname,$(SONAME)
 
 # #####################################################################
 
-.PHONY: clean all
+.PHONY: clean all linux-x86_32 linux-x86_64 linux-arm_32 linux-arm_64 linux-riscv_64 macos-x86_64 macos-arm_64
 
 $(NAME): $(OBJS) $(SRC)
 	ar -r $(NAME) $(OBJS)
 	ranlib $(NAME)
+
+linux-x86_32: CC=$(CC_LINUX_X86_32)
+
+linux-x86_32: clean $(NAME)
+
+linux-x86_64: CC=$(CC_LINUX_X86_64)
+
+linux-x86_64: clean $(NAME)
+
+linux-arm_32: CC=$(CC_LINUX_ARM_32)
+
+linux-arm_32: clean $(NAME)
+
+linux-arm_64: CC=$(CC_LINUX_ARM_64)
+
+linux-arm_64: clean $(NAME)
+
+linux-riscv_64: CC=$(CC_LINUX_RISCV_64)
+
+linux-riscv_64: clean $(NAME)
+
+macos-x86_64: CC=$(CC_MACOS_X86_64)
+
+macos-x86_64: clean $(NAME)
+
+macos-arm_64: CC=$(CC_MACOS_ARM_64)
+
+macos-arm_64: clean $(NAME)
 
 $(SONAME): $(OBJS) $(SRC)
 	$(CC) $(OBJS) $(LDFLAGS) -o $(SONAME)

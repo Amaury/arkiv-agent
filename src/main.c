@@ -17,6 +17,7 @@
 #include <stdlib.h>
 #include "yansi.h"
 #include "configuration.h"
+#include "agent.h"
 
 /* *** declaration of private functions *** */
 void _agent_usage(char *progname);
@@ -36,6 +37,9 @@ void _agent_usage(char *progname);
  * Main function of the program.
  */
 int main(int argc, char *argv[]) {
+	printf("'%s'\n", A_API_URL_SERVER_PARAMS);
+	exit(0);
+
 	// management of execution option
 	if (argc == 2 && !strcmp(argv[1], OPT_CONFIG)) {
 		exec_configuration();
@@ -158,23 +162,8 @@ void _agent_usage(char *progname) {
 	       "is a program used to backup a computer, using the parameters\n"
 	       "  declared on the "
 	       YANSI_UNDERLINE "Arkiv.sh" YANSI_RESET
-	       " service. It shoud be called automatically (by\n  the crontab) "
+	       " service. It shoud be called automatically (by the\n  cron daemon) "
 	       "and not by a user, appart from during its installation process.\n\n"
-
-	       "  The Arkiv installation directory:\n"
-	       YANSI_FAINT "    /opt/arkiv/\n" YANSI_RESET
-	       "    ├─ " YANSI_FAINT "bin/\n" YANSI_RESET
-	       "    │  ├─ " YANSI_BLUE "agent" YANSI_RESET
-	       "        The Arkiv agent program\n"
-	       "    │  └─ " YANSI_BLUE "rclone" YANSI_RESET
-	       "       The rclone program (see https://rclone.net)\n"
-	       "    ├─ " YANSI_FAINT "etc/\n" YANSI_RESET
-	       "    │  └─ " YANSI_BLUE "agent.ini" YANSI_RESET
-	       "    The agent's configuration file\n"
-	       "    └─ " YANSI_FAINT "log/\n" YANSI_RESET
-	       "       └─ " YANSI_BLUE "agent.log" YANSI_RESET
-	       "    The agent's execution log\n"
-	       "\n"
 
 	       YANSI_BG_GRAY YANSI_WHITE " Usage " YANSI_RESET "\n\n"
 	       YANSI_FAINT "  [envvars] " YANSI_RESET
@@ -186,11 +175,15 @@ void _agent_usage(char *progname) {
 	       YANSI_YELLOW "  help\n" YANSI_RESET
 	       "  Display this help. Same effect if the mode is not specified.\n\n"
 	       YANSI_YELLOW "  config\n" YANSI_RESET
-	       "  Ask questions in order to create the Arkiv configuration file, then\n"
-	       "  declare the local machine up to Arkiv.sh service.\n\n"
+	       "  Ask questions in order to create the Arkiv configuration file, then declare\n"
+	       "  the local machine up to the Arkiv.sh service.\n\n"
+	       YANSI_YELLOW "  declare\n" YANSI_RESET
+	       "  Declare the local server to the Arkiv.sh service.\n"
+	       "  Useful when the configuration is cloned and the " YANSI_YELLOW "config" YANSI_RESET
+	       " command was not used.\n\n"
 	       YANSI_YELLOW "  backup\n" YANSI_RESET
-	       "  Perform the backup configured on Arkiv.sh service "
-	       "for this machine.\n\n"
+	       "  Perform the backup configured on Arkiv.sh service for this machine.\n"
+	       "  SHould be called by the cron daemon only.\n\n"
 	       YANSI_YELLOW "  restore latest|identifier\n" YANSI_RESET
 	       "  Perform the restore of the lastest backup or the backup with the\n"
 	       "  given identifier.\n\n"

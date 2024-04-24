@@ -4,7 +4,7 @@
  * ytimer_new()
  * Create a timer object.
  */
-ytimer_t *ytimer_new() {
+ytimer_t *ytimer_new(void) {
 	ytimer_t *timer;
 
 	timer = malloc0(sizeof(ytimer_t));

@@ -173,7 +173,7 @@ bool yfile_put_string(const char *path, const ystr_t str) {
 	if (fd == -1)
 		return (false);
 	ssize_t written = write(fd, str, ys_bytesize(str));
-	if (written == -1 || (size_t)written != ys_bytesize(len))
+	if (written == -1 || (size_t)written != ys_bytesize(str))
 		res = false;
 	close(fd);
 	return (res);

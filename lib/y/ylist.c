@@ -1,7 +1,7 @@
 #include "ylist.h"
 
 /* Creates a new list. */
-ylist_t *ylist_new() {
+ylist_t *ylist_new(void) {
 	ylist_t *list;
 
 	list = (ylist_t*)malloc0(sizeof(ylist_t));
