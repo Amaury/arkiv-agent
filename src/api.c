@@ -5,6 +5,7 @@
 #include "yresult.h"
 #include "yexec.h"
 #include "configuration.h"
+#include "utils.h"
 #include "api.h"
 #include "agent.h"
 
@@ -91,9 +92,9 @@ static yres_var_t _api_call(const char *url, const char *user, const char *pwd, 
 		ytable_foreach(params, _api_url_add_param, (void*)&foreachParam);
 	}
 	// call the external program
-	if (config_program_exists("curl"))
+	if (check_program_exists("curl"))
 		res = _api_curl(url, user, pwd);
-	else if (config_program_exists("wget"))
+	else if (check_program_exists("wget"))
 		res = _api_wget(url, user, pwd);
 	else {
 		result = YRESULT_ERR(yres_var_t, YENOEXEC);
@@ -148,7 +149,7 @@ static yres_bin_t _api_curl(const char *url, const char *user, const char *pwd) 
 	if (!url || !strlen(url))
 		return (YRESULT_ERR(yres_bin_t, YEPARAM));
 	// find curl
-	curlPath = config_get_program_path("curl");
+	curlPath = get_program_path("curl");
 	if (!curlPath)
 		return (YRESULT_ERR(yres_bin_t, YENOEXEC));
 	// create the file content
@@ -212,7 +213,7 @@ static yres_bin_t _api_wget(const char *url, const char *user, const char *pwd) 
 	if (!url || !strlen(url))
 		return (YRESULT_ERR(yres_bin_t, YEPARAM));
 	// find wget
-	wgetPath = config_get_program_path("wget");
+	wgetPath = get_program_path("wget");
 	if (!wgetPath)
 		return (YRESULT_ERR(yres_bin_t, YENOEXEC));
 	// create the full URL string

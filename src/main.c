@@ -16,6 +16,8 @@
 #include "yansi.h"
 #include "agent.h"
 #include "configuration.h"
+#include "declare.h"
+#include "backup.h"
 
 /* *** declaration of private functions *** */
 void _agent_usage(const char *progname);
@@ -55,12 +57,26 @@ int main(int argc, char *argv[]) {
 	} else {
 		// load configuration file
 		agent_load_configuration(agent);
+		if (agent->debug_mode) {
+			printf("agent_path           : '%s'\n", agent->agent_path);
+			printf("conf_path            : '%s'\n", agent->conf_path);
+			printf("debug_mode           : '%s'\n", agent->debug_mode ? "true" : "false");
+			printf("conf.logfile         : '%s'\n", agent->conf.logfile);
+			printf("conf.archives_path   : '%s'\n", agent->conf.archives_path);
+			printf("conf.org_key         : '%s'\n", agent->conf.org_key);
+			printf("conf.hostname        : '%s'\n", agent->conf.hostname);
+			printf("conf.crypt_pwd       : '%s'\n", agent->conf.crypt_pwd);
+			printf("conf.use_syslog      : '%s'\n", agent->conf.use_syslog ? "true" : "false");
+		}
 		// execution
 		if (exec_type == A_TYPE_DECLARE) {
-			printf("agent declare\n");
+			// server declaration
+			exec_declare(agent);
 		} else if (exec_type == A_TYPE_BACKUP) {
-			printf("agent_backup();\n");
+			// backup
+			exec_backup(agent);
 		} else if (exec_type == A_TYPE_RESTORE) {
+			// restore
 			printf("agent_restore(argv[2]);\n");
 		}
 	}

@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <limits.h>
 #include "ymemory.h"
+#include "ydefs.h"
 #include "yansi.h"
 #include "ystr.h"
 #include "yfile.h"
@@ -40,6 +41,11 @@ agent_t *agent_new(char *exe_path) {
 	agent->conf.logfile = agent_getenv_static(A_ENV_LOGFILE, A_PATH_LOGFILE);
 	// set default local archives path
 	agent->conf.archives_path = agent_getenv_static(A_ENV_ARCHIVES_PATH, A_PATH_ARCHIVES);
+	// manage debug mode
+	ystr_t ys = agent_getenv(A_ENV_DEBUG_MODE, NULL);
+	if (STR_IS_TRUE(ys))
+		agent->debug_mode = true;
+	ys_free(ys);
 	/*
 	agent->log.backup_files = yarray_new();
 	agent->log.backup_databases = yarray_new();
@@ -130,65 +136,25 @@ void agent_load_configuration(agent_t *agent) {
 		exit(3);
 	}
 	agent->conf.crypt_pwd = agent_getenv_static(A_ENV_CRYPT_PWD, ys);
-	// check logfile
+	// check logfile and initialize log's file descriptor
 	if (!logfile || !yvar_is_string(logfile) || !(ys = yvar_get_string(logfile)) || ys_empty(ys)) {
+		// no log file - write to stdout
+		agent->conf.logfile = NULL;
+		agent->log_fd = stdout;
 		printf(YANSI_RED "Empty log file in configuration file '%s'.\n" YANSI_RESET, agent->conf_path);
 		exit(3);
+	} else {
+		agent->conf.logfile = agent_getenv_static(A_ENV_ARCHIVES_PATH, ys);
+		agent->log_fd = fopen(agent->conf.logfile, "a");
+		if (!agent->log_fd)
+			agent->log_fd = stdout;
 	}
-	agent->conf.logfile = agent_getenv_static(A_ENV_ARCHIVES_PATH, ys);
-	// check syslog
-	bool bool_value = true;
-	if (!syslog || (!yvar_is_bool(syslog) && !yvar_is_string(syslog)) ||
-	    (yvar_is_bool(syslog) && (bool_value = yvar_get_bool(syslog)) == true) ||
-	    (yvar_is_string(syslog) &&
-	     (!(ys = yvar_get_string(syslog)) ||
-	      (strcmp(ys, A_SYSLOG_USER) && strcmp(ys, A_SYSLOG_LOCAL0) && strcmp(ys, A_SYSLOG_LOCAL1) &&
-	       strcmp(ys, A_SYSLOG_LOCAL2) && strcmp(ys, A_SYSLOG_LOCAL3) && strcmp(ys, A_SYSLOG_LOCAL4) &&
-	       strcmp(ys, A_SYSLOG_LOCAL5) && strcmp(ys, A_SYSLOG_LOCAL6) && strcmp(ys, A_SYSLOG_LOCAL7))))) {
-		printf(YANSI_RED "Incorrect syslog valuein configuration file '%s'.\n" YANSI_RESET, agent->conf_path);
-		exit(3);
+	// check syslog and initialize syslog connection
+	if (syslog && yvar_is_bool(syslog) && yvar_get_bool(syslog) == true) {
+		agent->conf.use_syslog = true;
+		openlog(A_SYSLOG_IDENT, LOG_CONS, LOG_USER);
 	}
-	ystr_t final_value = agent_getenv(A_ENV_SYSLOG, NULL);
-	if (!final_value && bool_value == false) {
-		agent->conf.use_syslog = false;
-	} else if ((final_value && !strcmp(final_value, A_SYSLOG_USER)) ||
-	           (!final_value && !strcmp(ys, A_SYSLOG_USER))) {
-		agent->conf.use_syslog = true;
-		agent->conf.syslog_facility = LOG_USER;
-	} else if ((final_value && !strcmp(final_value, A_SYSLOG_LOCAL0)) ||
-	           (!final_value && !strcmp(ys, A_SYSLOG_LOCAL0))) {
-		agent->conf.use_syslog = true;
-		agent->conf.syslog_facility = LOG_LOCAL0;
-	} else if ((final_value && !strcmp(final_value, A_SYSLOG_LOCAL1)) ||
-	           (!final_value && !strcmp(ys, A_SYSLOG_LOCAL1))) {
-		agent->conf.use_syslog = true;
-		agent->conf.syslog_facility = LOG_LOCAL1;
-	} else if ((final_value && !strcmp(final_value, A_SYSLOG_LOCAL2)) ||
-	           (!final_value && !strcmp(ys, A_SYSLOG_LOCAL2))) {
-		agent->conf.use_syslog = true;
-		agent->conf.syslog_facility = LOG_LOCAL2;
-	} else if ((final_value && !strcmp(final_value, A_SYSLOG_LOCAL3)) ||
-	           (!final_value && !strcmp(ys, A_SYSLOG_LOCAL3))) {
-		agent->conf.use_syslog = true;
-		agent->conf.syslog_facility = LOG_LOCAL3;
-	} else if ((final_value && !strcmp(final_value, A_SYSLOG_LOCAL4)) ||
-	           (!final_value && !strcmp(ys, A_SYSLOG_LOCAL4))) {
-		agent->conf.use_syslog = true;
-		agent->conf.syslog_facility = LOG_LOCAL4;
-	} else if ((final_value && !strcmp(final_value, A_SYSLOG_LOCAL5)) ||
-	           (!final_value && !strcmp(ys, A_SYSLOG_LOCAL5))) {
-		agent->conf.use_syslog = true;
-		agent->conf.syslog_facility = LOG_LOCAL5;
-	} else if ((final_value && !strcmp(final_value, A_SYSLOG_LOCAL6)) ||
-	           (!final_value && !strcmp(ys, A_SYSLOG_LOCAL6))) {
-		agent->conf.use_syslog = true;
-		agent->conf.syslog_facility = LOG_LOCAL6;
-	} else if ((final_value && !strcmp(final_value, A_SYSLOG_LOCAL7)) ||
-	           (!final_value && !strcmp(ys, A_SYSLOG_LOCAL7))) {
-		agent->conf.use_syslog = true;
-		agent->conf.syslog_facility = LOG_LOCAL7;
-	}
-	ys_free(final_value);
+	// cleanup
 	ytable_free(json);
 	yjson_free(json_parser);
 }

@@ -11,6 +11,7 @@
 #include <stdbool.h>
 #include <syslog.h>
 #include "ystr.h"
+#include "yarray.h"
 
 /** @const A_AGENT_VERSION	Version of the agent. */
 #define A_AGENT_VERSION	1.0
@@ -88,25 +89,9 @@
 /** @const A_JSON_CRYPT_PWD	JSON key for encryption password. */
 #define A_JSON_CRYPT_PWD	"crypt_pwd"
 
-/* ********** SYSLOG FACILITY STRINGS ********** */
-/** @const A_SYSLOG_USER	USER facility. */
-#define A_SYSLOG_USER		"USER"
-/** @const A_SYSLOG_LOCAL0	LOCAL0 facility. */
-#define A_SYSLOG_LOCAL0		"LOCAL0"
-/** @const A_SYSLOG_LOCAL1	LOCAL1 facility. */
-#define A_SYSLOG_LOCAL1		"LOCAL1"
-/** @const A_SYSLOG_LOCAL2	LOCAL2 facility. */
-#define A_SYSLOG_LOCAL2		"LOCAL2"
-/** @const A_SYSLOG_LOCAL3	LOCAL3 facility. */
-#define A_SYSLOG_LOCAL3		"LOCAL3"
-/** @const A_SYSLOG_LOCAL4	LOCAL4 facility. */
-#define A_SYSLOG_LOCAL4		"LOCAL4"
-/** @const A_SYSLOG_LOCAL5	LOCAL5 facility. */
-#define A_SYSLOG_LOCAL5		"LOCAL5"
-/** @const A_SYSLOG_LOCAL6	LOCAL6 facility. */
-#define A_SYSLOG_LOCAL6		"LOCAL6"
-/** @const A_SYSLOG_LOCAL7	LOCAL7 facility. */
-#define A_SYSLOG_LOCAL7		"LOCAL7"
+/* ********** SYSLOG STRINGS ********** */
+/** @const A_SYSLOG_IDENT	Syslog identity. */
+#define A_SYSLOG_IDENT		"arkiv_agent"
 
 /* ********** API URLS ********** */
 #ifdef DEV_MODE
@@ -124,6 +109,12 @@
 	/** @const A_API_URL_BACKUP_REPORT	API URL for backup reporting. */
 	#define A_API_URL_BACKUP_REPORT		"https://api.arkiv.sh/v1/backup/report"
 #endif // DEV_MODE
+
+/* ********** CONFIGURATION VALUES ********** */
+/** @const A_ORG_KEY_LENGTH	 	Size of organization keys (45). */
+#define A_ORG_KEY_LENGTH		4
+/** @const A_MINIMUM_CRYPT_PWD_LENGTH	Minimum size of encryption password. */
+#define A_MINIMUM_CRYPT_PWD_LENGTH	24
 
 /* ********** COMPRESSION ALGORITHMS ********** */
 /** @const A_COMPRESS_NONE	Flat tar'ed file without compression. */
@@ -145,12 +136,6 @@
 /** @const A_CRYPT_GPG		GPG. */
 #define A_CRYPT_GPG		'g'
 
-/* ********** LOG ********** */
-/** @define ALOG	Add a message to the log file. */
-#define ALOG(...)	alog(agent, true, __VA_ARGS__)
-/** @define ALOG_RAW	Add a message to the log file, without time. */
-#define ALOG_RAW(...)	alog(agent, false, __VA_ARGS__)
-
 /* ********** ERROR STATUS MANAGEMENT ********** */
 /** @define AERROR_OVERRIDE	Returns the first status that is not YENOERR. */
 #define AERROR_OVERRIDE(a, b)	(((a) != YENOERR) ? (a) : (b))
@@ -168,9 +153,12 @@
  * @field	conf.hostname		Hostname.
  * @field	conf.crypt_pwd		Encryption password.
  * @field	conf.use_syslog		True if syslog is used.
- * @field	conf.syslog_facility	Syslog facility, if syslog is used.
  * @field	param.encryption	Encryption algorithm.
  * @field	param.compression	Compression algorithm.
+ * @field	log.status		Global execution status.
+ * @field	log.backup_files	List of backed up files, with a status.
+ * @field	log.backup_databases	List of backup up databases, with a status.
+ * @field	log.upload_s3		List of S3 uploads, with a status.
  */
 typedef struct agent_s {
 	char *agent_path;
@@ -184,7 +172,6 @@ typedef struct agent_s {
 		ystr_t hostname;
 		ystr_t crypt_pwd;
 		bool use_syslog;
-		int syslog_facility;
 	} conf;
 	struct {
 		enum {
@@ -200,6 +187,18 @@ typedef struct agent_s {
 			COMP_GZIP
 		} compression;
 	} param;
+	struct {
+		enum {
+			STATUS_CREATED = 0,
+			STATUS_SUCCESS,
+			STATUS_FAIL_FILE,
+			STATUS_FAIL_DB,
+			STATUS_FAIL_UPDLOAD
+		} status;
+		yarray_t backup_files;
+		yarray_t backup_databases;
+		yarray_t upload_s3;
+	} exec_log;
 } agent_t;
 
 #if 0

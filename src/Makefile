@@ -15,7 +15,11 @@ NAME_MACOS_ARM_64	= arkiv_agent-macos-arm_64
 # Source files
 SRC	=	main.c		\
 		agent.c		\
+		log.c		\
 		configuration.c	\
+		declare.c	\
+		backup.c	\
+		utils.c		\
 		api.c
 
 #		http.c		\

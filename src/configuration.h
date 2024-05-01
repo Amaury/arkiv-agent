@@ -13,33 +13,84 @@
 #include "agent.h"
 
 /**
+ * @typedef	config_crontab_t
+ * @abstract	Type of cron installation.
+ * @field	A_CONFIG_CRON_HOURLY	/etc/cron.hourly
+ * @field	A_CONFIG_CRON_D		/etc/cron.d
+ * @field	A_CONFIG_CRON_CRONTAB	/etc/crontab
+ */
+typedef enum {
+	A_CONFIG_CRON_HOURLY,
+	A_CONFIG_CRON_D,
+	A_CONFIG_CRON_CRONTAB
+} config_crontab_t;
+
+/**
  * @function	exec_configuration
  * @abstract	Main function for configuration file generation.
  * @param	agent	Pointer to the agent structure.
  */
 void exec_configuration(agent_t *agent);
-/**
- * @function	config_program_exists
- *		Tells if a given program is installed on the local computer.
- *		It is search in '/bin', '/usr/bin' and '/usr/local/bin' directories,
- *		and with the 'which' program.
- * @param	binName	Name of the searched program.
- * @return	True if the program exists.
- */
-bool config_program_exists(const char *binName);
-/**
- * @function	config_get_program_path
- *		Returns the path to a program. The given program is searched in '/bin', '/usr/bin' and
- *		'/usr/local/bin' directories, and with the 'which' program.
- * @param	binName	Name of the searched program.
- * @return	The path to the program, or NULL.
- */
-ystr_t config_get_program_path(const char *binName);
-/**
- * @function	config_declare_server
- * @abstract	Declares the server to arkiv.sh API.
- * @param	orgKey		Organization key.
- * @param	hostname	Hostname.
- */
-void config_declare_server(const char *orgKey, const char *hostname);
+
+/* ********** PRIVATE FUNCTIONS ********** */
+#ifdef __A_CONFIGURATION_PRIVATE__
+	/**
+	 * @function	config_ask_orgkey
+	 * @abstract	Asks for the organization key.
+	 * @return	The key. Must be freed.
+	 */
+	ystr_t config_ask_orgkey(void);
+	/**
+	 * @function	config_ask_hostname
+	 * @abstract	Asks for the hostname.
+	 * @return	The hostname.
+	 */
+	ystr_t config_ask_hostname(void);
+	/**
+	 * @function	config_ask_archives_path
+	 * @abstract	Asks for the local archives path.
+	 * @param	agent	Pointer to the agent structure.
+	 * @return	The archives path.
+	 */
+	ystr_t config_ask_archives_path(agent_t *agent);
+	/**
+	 * @function	config_ask_log_file
+	 * @bastract	Asks for the log file.
+	 * @param	agent	Pointer to the agent structure.
+	 * @return	The log file's path.
+	 */
+	ystr_t config_ask_log_file(agent_t *agent);
+	/**
+	 * @function	config_ask_syslog
+	 * @abstract	Asks for syslog.
+	 * @return	True if syslog is used.
+	 */
+	bool config_ask_syslog(void);
+	/**
+	 * @function	config_ask_encryption_password
+	 * @abstract	Asks for the encryption password.
+	 * @return	The encryption password.
+	 */
+	ystr_t config_ask_encryption_password(void);
+	/**
+	 * @function	config_write_json_file
+	 * @abstract	Writes the JSON configuration file.
+	 * @param	org_key		Organization key.
+	 * @param	hostname	Hostname.
+	 * @param	archives_path	Archives path.
+	 * @param	logfile		Log file's path.
+	 * @param	syslog		True if syslog is used.
+	 * @param	crypt_pwd	Encryption password.
+	 */
+	void config_write_json_file(const char *orgKey, const char *hostname, const char *archives_path,
+	                            const char *logfile, bool syslog, const char *cryptPwd);
+	/**
+	 * @function	config_add_to_crontab
+	 * @abstract	Check if the agent execution is already in crontab. If not, add it.
+	 * @param	agent		Pointer to the agent structure.
+	 * @param	cron_type	Type of available crontab.
+	 * @return	YENOERR if the agent execution was in crontab or has been added successfully.
+	 */
+	void config_add_to_crontab(agent_t *agent, config_crontab_t cron_type);
+#endif // __A_CONFIGURATION_PRIVATE__
 
