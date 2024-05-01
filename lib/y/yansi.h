@@ -132,12 +132,18 @@ extern "C" {
 #define YANSI_BG_BLACK		"\x1b[48;5;16m"
 
 /**
- *  @define YANSI_LINK	Use to create a link. Must be used as the first parameter
+ * @define YANSI_LINK	Use to create a link. Must be used as the first parameter
  *			of printf() or sprintf() function.
  * @param	string	url	URL pointed by the link.
  * @param	string	title	Title of the link.
  */
 #define YANSI_LINK		"\x1b]8;;%s\x1b\\%s\x1b]8;;\x1b\\"
+/**
+ * @define YANSI_LINK_STATIC	Use to create a link. Must be used with static strings.
+ * @param	string	url	URL pointed by the link.
+ * @param	string	title	Title of the link.
+ */
+#define YANSI_LINK_STATIC(url, title)	"\x1b]8;;" url "\x1b\\" title "\x1b]8;;\x1b\\"
 
 #if defined(__cplusplus) || defined(c_plusplus)
 }

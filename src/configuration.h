@@ -10,12 +10,14 @@
 
 #include <stdbool.h>
 #include "ystr.h"
+#include "agent.h"
 
 /**
  * @function	exec_configuration
- *		Main function for configuration file generation.
+ * @abstract	Main function for configuration file generation.
+ * @param	agent	Pointer to the agent structure.
  */
-void exec_configuration(void);
+void exec_configuration(agent_t *agent);
 /**
  * @function	config_program_exists
  *		Tells if a given program is installed on the local computer.
@@ -33,4 +35,11 @@ bool config_program_exists(const char *binName);
  * @return	The path to the program, or NULL.
  */
 ystr_t config_get_program_path(const char *binName);
+/**
+ * @function	config_declare_server
+ * @abstract	Declares the server to arkiv.sh API.
+ * @param	orgKey		Organization key.
+ * @param	hostname	Hostname.
+ */
+void config_declare_server(const char *orgKey, const char *hostname);
 

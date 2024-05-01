@@ -627,6 +627,12 @@ double yvar_get_float(yvar_t *var) {
 		return (0);
 	return (var->float_value);
 }
+/* Return the const string value of a yvar. */
+const char *yvar_get_const_string(yvar_t *var) {
+	if (var->type != YVAR_CONST_STRING)
+		return (NULL);
+	return (var->const_value);
+}
 /* Return the string value of a yvar. */
 ystr_t yvar_get_string(yvar_t *var) {
 	if (var->type != YVAR_STRING)

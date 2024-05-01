@@ -83,29 +83,59 @@ bool yfile_touch(const char *path, mode_t file_mode, mode_t dir_mode);
  */
 char *yfile_tmp(const char *prefix);
 /**
+ * @function	yfile_get_contents
+ *		Read the full content of a file.
+ * @param	path	File path.
+ * @return	The content of the file, or NULL if the file is not readable.
+ */
+ybin_t *yfile_get_contents(const char *path);
+/**
+ * @function	yfile_get_string_contents
+ *		Read the full textual content of a file.
+ * @param	path	File path.
+ * @return	The content of the file, or NULL if the file is not readable.
+ */
+ystr_t yfile_get_string_contents(const char *path);
+/**
  * @function	yfile_put_contents
  *		Write some data in a file (mode 600).
  * @param	path	File path.
- * @param	bin	Binary data.
+ * @param	data	Binary data.
  * @return	True if everything went fine.
  */
-bool yfile_put_contents(const char *path, ybin_t *bin);
-/**
- * @function	yfile_put_const_string
- * @abstract	Write a constant string in a file (mode 600).
- * @param	path	File path.
- * @param	str	String.
- * @return	True if everything went fine.
- */
-bool yfile_put_const_string(const char *path, const char *str);
+bool yfile_put_contents(const char *path, ybin_t *data);
 /**
  * @function	yfile_put_string
- * @abstract	Write a ystring in a file (mode 600).
+ * @abstract	Write a string in a file (mode 600).
  * @param	path	File path.
  * @param	str	String.
  * @return	True if everything went fine.
  */
-bool yfile_put_string(const char *path, const ystr_t str);
+bool yfile_put_string(const char *path, const char *str);
+/**
+ * @function	yfile_append_contents
+ * @abstract	Append data at the end of a file.
+ * @param	path	File path.
+ * @param	data	Binary data.
+ * @return	True if everything went fine.
+ */
+bool yfile_append_contents(const char *path, ybin_t *data);
+/**
+ * @function	yfile_append_string
+ * @abstract	Append a string at the end of a file.
+ * @param	path	File path.
+ * @param	str	String.
+ * @return	True if everything went fine.
+ */
+bool yfile_append_string(const char *path, const char *str);
+/**
+ * @function	yfile_contains
+ * @abstract	Tell if a file contains a given string. The file is read in one pass.
+ * @param	path	File path.
+ * @param	str	String searched in the file.
+ * @return	True if the string was found.
+ */
+bool yfile_contains(const char *path, const char *str);
 
 #if defined(_cplusplus) || defined(c_pluspuls)
 }

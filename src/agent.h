@@ -8,8 +8,34 @@
  */
 #pragma once
 
+#include <stdbool.h>
+#include <syslog.h>
+#include "ystr.h"
+
 /** @const A_AGENT_VERSION	Version of the agent. */
 #define A_AGENT_VERSION	1.0
+
+/* ********** COMMAND-LINE OPTIONS ********** */
+/** @const A_OPT_CONFIG		CLI option for configuration. */
+#define	A_OPT_CONFIG		"config"
+/** @const A_OPT_DECLARE	CLI option for declaration. */
+#define A_OPT_DECLARE		"declare"
+/** @const A_OPT_BACKUP		CLI option for backup. */
+#define	A_OPT_BACKUP		"backup"
+/** @const A_OPT_RESTORE	CLI option for restore. */
+#define	A_OPT_RESTORE		"restore"
+/** @const A_ENV_CONF		Environment variable for the configuration file's path. */
+#define A_ENV_CONF		"conf"
+/** @const A_ENV_LOGFILE	Environment variable for the log file's path. */
+#define A_ENV_LOGFILE		"logfile"
+/** @const A_ENV_SYSLOG		Environment variable for the syslog facility. */
+#define A_ENV_SYSLOG		"syslog"
+/** @const A_ENV_DEBUG_MODE	Environment variable for the debug mode. */
+#define A_ENV_DEBUG_MODE	"debug_mode"
+/** @const A_ENV_ARCHIVES_PATH	Environment variable for the local archives path. */
+#define A_ENV_ARCHIVES_PATH	"archives_path"
+/** @count A_ENV_CRYPT_PWD	Environment variable for the encryption password. */
+#define A_ENV_CRYPT_PWD		"crypt_pwd"
 
 /* ********** DEFAULT PATHS ************ */
 /** @const A_PATH_ROOT		Arkiv root path. */
@@ -21,7 +47,7 @@
 /** @const A_PATH_ARCHIVES	Arkiv archives path. */
 #define A_PATH_ARCHIVES		"/var/archives"
 /** @const A_PATH_AGENT_CONFIG	Path to the configuration file. */
-#define A_PATH_AGENT_CONFIG	"/opt/arkiv/etc/arkiv.json"
+#define A_PATH_AGENT_CONFIG	"/opt/arkiv/etc/agent.json"
 /** @const A_PATH_PARAMS	Path to the backup parameters file. */
 #define A_PATH_BACKUP_PARAMS	"/opt/arkiv/etc/backup.json"
 /** @const A_PATH_LOGFILE	Path to the log file. */
@@ -30,23 +56,64 @@
 #define A_EXE_FILE		"/opt/arkiv/bin/agent"
 
 /* ********** CRON CONFIGURATION ********** */
-/** @const A_CRON_HOURLY_PATH	Path to the cron.hourly directory. */
-#define A_CRON_HOURLY_PATH	"/etc/cron.hourly/arkiv-agent"
-/** @const A_CRON_D_PATH	Path to the cron.d directory. */
-#define A_CRON_D_PATH		"/etc/cron.d"
-/** @const A_CRON_FILENAME	Name of the cron file (in cron.hourly or cron.d directories). */
-#define A_CRON_FILENAME		"arkiv_agent"
-/** @const A_CRON_TXT		Content of the crontab file. */
-#define A_CRON_TXT		"#!/bin/sh\n\n/opt/arkiv/bin/agent backup\n"
-/** @const A_CRON_DECLARATION	Definition of a full crontab line. */
-#define A_CRON_DECLARATION	"* * * * *	/opt/arkiv/bin/agent backup\n"
+/** @const A_CRON_HOURLY_PATH	Path to the /etc/cron.hourly/arkiv_agent file. */
+#define A_CRON_HOURLY_PATH	"/etc/cron.hourly/arkiv_agent"
+/** @const A_CRON_D_PATH	Path to the /etc/cron.d/arkiv_agent file. */
+#define A_CRON_D_PATH		"/etc/cron.d/arkiv_agent"
+/** @const A_CRON_ETC_PATH	Path to the /etc/crontab file. */
+#define A_CRON_ETC_PATH		"/etc/crontab"
+/** @const A_CRONTAB_SCRIPT	Content of the /etc/cron.hourly/arkiv_agent or /etc/cron.d/arkiv_agent file. */
+#define A_CRONTAB_SCRIPT	"#!/bin/sh\n\n" \
+				"# Arkiv agent hourly execution.\n" \
+				"# This program backups the local computer, using the Arkiv.sh service.\n" \
+				"# More information: https://www.arkiv.sh\n\n" \
+				"%s backup\n"
+/** @const A_CRONTAB_LINE	Crontab execution line. */
+#define A_CRONTAB_LINE		"\n# Arkiv agent hourly execution\n" \
+				"# This program backups the local computer, using the Arkiv.sh service\n" \
+				"# More information: https://www.arkiv.sh\n\n" \
+				"0 * * * *    root    %s backup\n"
+
+/* ********** JSON KEYS ********** */
+/** @const A_JSON_ORG_KEY	JSON key for organisation key. */
+#define A_JSON_ORG_KEY		"org_key"
+/** @const A_JSON_HOSTNAME	JSON key for hostname. */
+#define A_JSON_HOSTNAME		"hostname"
+/** @const A_JSON_ARCHIVES_PATH	JSON key for archives path. */
+#define A_JSON_ARCHIVES_PATH	"archives_path"
+/** @const A_JSON_LOGFILE	JSON key for log file. */
+#define A_JSON_LOGFILE		"logfile"
+/** @const A_JSON_SYSLOG	JSON key for syslog. */
+#define A_JSON_SYSLOG		"syslog"
+/** @const A_JSON_CRYPT_PWD	JSON key for encryption password. */
+#define A_JSON_CRYPT_PWD	"crypt_pwd"
+
+/* ********** SYSLOG FACILITY STRINGS ********** */
+/** @const A_SYSLOG_USER	USER facility. */
+#define A_SYSLOG_USER		"USER"
+/** @const A_SYSLOG_LOCAL0	LOCAL0 facility. */
+#define A_SYSLOG_LOCAL0		"LOCAL0"
+/** @const A_SYSLOG_LOCAL1	LOCAL1 facility. */
+#define A_SYSLOG_LOCAL1		"LOCAL1"
+/** @const A_SYSLOG_LOCAL2	LOCAL2 facility. */
+#define A_SYSLOG_LOCAL2		"LOCAL2"
+/** @const A_SYSLOG_LOCAL3	LOCAL3 facility. */
+#define A_SYSLOG_LOCAL3		"LOCAL3"
+/** @const A_SYSLOG_LOCAL4	LOCAL4 facility. */
+#define A_SYSLOG_LOCAL4		"LOCAL4"
+/** @const A_SYSLOG_LOCAL5	LOCAL5 facility. */
+#define A_SYSLOG_LOCAL5		"LOCAL5"
+/** @const A_SYSLOG_LOCAL6	LOCAL6 facility. */
+#define A_SYSLOG_LOCAL6		"LOCAL6"
+/** @const A_SYSLOG_LOCAL7	LOCAL7 facility. */
+#define A_SYSLOG_LOCAL7		"LOCAL7"
 
 /* ********** API URLS ********** */
 #ifdef DEV_MODE
 	/** @const A_API_URL_PARAMS		API URL used to get server parameters. Parameters: org key, server name. */
 	#define A_API_URL_SERVER_PARAMS		"https://conf-dev.arkiv.sh/%s/%s/params.json"
 	/** @const A_API_URL_SERVER_DECLARE	API URL for server declaration. */
-	#define A_API_URL_SERVER_DECLARE	"https://api.dev.arkiv.sh/v1/server/declare"
+	#define A_API_URL_SERVER_DECLARE	"http://api.dev.arkiv.sh/v1/server/declare"
 	/** @const A_API_URL_BACKUP_REPORT	API URL for backup reporting. */
 	#define A_API_URL_BACKUP_REPORT		"https://api.dev.arkiv.sh/v1/backup/report"
 #else
@@ -87,6 +154,53 @@
 /* ********** ERROR STATUS MANAGEMENT ********** */
 /** @define AERROR_OVERRIDE	Returns the first status that is not YENOERR. */
 #define AERROR_OVERRIDE(a, b)	(((a) != YENOERR) ? (a) : (b))
+
+/**
+ * @typedef	agent_t
+ * @abstract	Main structure of the Arkiv agent.
+ * @field	agent_path		Realpath to the agent program.
+ * @field	conf_path		Path to the configuration file.
+ * @field	debug_mode		True if the debug mode was set.
+ * @field	log_fd			File descriptor to the log file.
+ * @field	conf.logfile		Log file's path.
+ * @field	conf.archives_path	Root path to the local archives directory.
+ * @field	conf.org_key		Organization key.
+ * @field	conf.hostname		Hostname.
+ * @field	conf.crypt_pwd		Encryption password.
+ * @field	conf.use_syslog		True if syslog is used.
+ * @field	conf.syslog_facility	Syslog facility, if syslog is used.
+ * @field	param.encryption	Encryption algorithm.
+ * @field	param.compression	Compression algorithm.
+ */
+typedef struct agent_s {
+	char *agent_path;
+	ystr_t conf_path;
+	bool debug_mode;
+	FILE *log_fd;
+	struct {
+		ystr_t logfile;
+		ystr_t archives_path;
+		ystr_t org_key;
+		ystr_t hostname;
+		ystr_t crypt_pwd;
+		bool use_syslog;
+		int syslog_facility;
+	} conf;
+	struct {
+		enum {
+			CRYPT_GPG,
+			CRYPT_SCRYPT,
+			CRYPT_OPENSSL
+		} encryption;
+		enum {
+			COMP_NONE,
+			COMP_ZSTD,
+			COMP_XZ,
+			COMP_BZIP2,
+			COMP_GZIP
+		} compression;
+	} param;
+} agent_t;
 
 #if 0
 /* ********** STRUCTURES ************ */
@@ -225,7 +339,45 @@ typedef struct {
 	ystatus_t compress_status;
 	ystatus_t encrypt_status;
 } log_item_t;
+#endif
 
+/**
+ * @function	agent_new
+ * @abstract	Creates a new agent structure.
+ * @param	exe_path	Executable path.
+ * @return	The allocated and initialized agent.
+ */
+agent_t *agent_new(char *exe_path);
+/**
+ * @function	agent_getenv
+ * @abstract	Returns a copy of an environment variable, or a default value.
+ * @param	envvar		Name of the environment variable.
+ * @param	default_value	The default value returned if the environment variable is not found.
+ * @return	The value.
+ */
+ystr_t agent_getenv(char *envvar, ystr_t default_value);
+/**
+ * @function	agent_getenv_static
+ * @abstract	Returns a copy of an environment varialbe, or a copy of a default value.
+ * @param	envvar		Name of the environment variable.
+ * @param	default_value	The default value, copied if the environment variable is not found.
+ * @return	The value.
+ */
+ystr_t agent_getenv_static(char *envvar, const char *default_value);
+/**
+ * @function	agent_load_configuration
+ * @abstract	Reads the configuration file.
+ * @param	agent	Pointer to the agent structure.
+ */
+void agent_load_configuration(agent_t *agent);
+/**
+ * @function	agent_free
+ * @abstract	Frees a previously created agent structure.
+ * @param	agent	Pointer to the allocated structure.
+ */
+void agent_free(agent_t *agent);
+
+#if 0
 /* ********** PUBLIC FUNCTIONS ********** */
 /* ---------- backup.c ---------- */
 /**

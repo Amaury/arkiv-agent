@@ -154,7 +154,7 @@ static yres_bin_t _api_curl(const char *url, const char *user, const char *pwd) 
 	// create the file content
 	fileContent = ys_printf(
 		NULL,
-		"url = \"https://%s\"\n"
+		"url = \"%s\"\n"
 		"user-agent = \"" _ARKIV_USER_AGENT "\"\n"
 		"%s%s%s%s%s",
 		url,

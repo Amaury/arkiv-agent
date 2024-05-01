@@ -178,6 +178,10 @@ static void _yjson_value_fsprint(yvar_t *value, ystr_t *str, FILE *stream, uint3
 		ystr_t ys = ys_printf(NULL, "%g", yvar_get_float(value));
 		_yjson_fsprint_string(ys, str, stream);
 		ys_free(ys);
+	} else if (yvar_is_const_string(value)) {
+		ystr_t ys = ys_printf(NULL, "\"%s\"", yvar_get_const_string(value));
+		_yjson_fsprint_string(ys, str, stream);
+		ys_free(ys);
 	} else if (yvar_is_string(value)) {
 		ystr_t ys = ys_printf(NULL, "\"%s\"", yvar_get_string(value));
 		_yjson_fsprint_string(ys, str, stream);

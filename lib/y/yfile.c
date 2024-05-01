@@ -128,11 +128,57 @@ cleanup:
 	ys_free(ys);
 	return (res);
 }
+/* Read the full content of a file. */
+ybin_t *yfile_get_contents(const char *path) {
+	if (!yfile_is_readable(path))
+		return (NULL);
+	FILE *file = fopen(path, "r");
+	if (!file)
+		return (NULL);
+	ybin_t *data = ybin_new();
+	if (!data) {
+		fclose(file);
+		return (NULL);
+	}
+	char buffer[65535];
+	size_t read_size;
+	while ((read_size = fread(buffer, 1, 65535, file))) {
+		if (ybin_append(data, buffer, read_size) != YENOERR) {
+			ybin_delete(data);
+			return (NULL);
+		}
+	}
+	fclose(file);
+	return (data);
+}
+/* Read the full textual content of a file. */
+ystr_t yfile_get_string_contents(const char *path) {
+	if (!yfile_is_readable(path))
+		return (NULL);
+	FILE *file;
+	if (!(file = fopen(path, "r")))
+		return (NULL);
+	ystr_t ys = ys_new("");
+	if (!ys) {
+		fclose(file);
+		return (NULL);
+	}
+	char buffer[65535];
+	size_t read_size;
+	while ((read_size = fread(buffer, 1, 65535, file))) {
+		if (ys_append(&ys, buffer) != YENOERR) {
+			ys_free(ys);
+			return (NULL);
+		}
+	}
+	fclose(file);
+	return (ys);
+}
 /* Write some data in a file (mode 0600). */
 bool yfile_put_contents(const char *path, ybin_t *data) {
 	bool res = true;
 
-	if (!path || !data->data || !data->bytesize)
+	if (!path || !data || !data->data || !data->bytesize)
 		return (false);
 	int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
 	if (fd == -1)
@@ -143,8 +189,8 @@ bool yfile_put_contents(const char *path, ybin_t *data) {
 	close(fd);
 	return (res);
 }
-/* Write a constant string in a file (mode 600). */
-bool yfile_put_const_string(const char *path, const char *str) {
+/* Write a string in a file (mode 600). */
+bool yfile_put_string(const char *path, const char *str) {
 	bool res = true;
 	size_t len;
 
@@ -161,21 +207,47 @@ bool yfile_put_const_string(const char *path, const char *str) {
 	close(fd);
 	return (res);
 }
-/* Write a ystring in a file (mode 600). */
-bool yfile_put_string(const char *path, const ystr_t str) {
+/* Append some data at the end of a file. */
+bool yfile_append_contents(const char *path, ybin_t *data) {
 	bool res = true;
 
-	if (!path)
+	if (!path || !data || !data->data || !data->bytesize)
 		return (false);
-	if (!str || ys_empty(str))
-		return (true);
-	int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
+	int fd = open(path, O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR);
 	if (fd == -1)
 		return (false);
-	ssize_t written = write(fd, str, ys_bytesize(str));
-	if (written == -1 || (size_t)written != ys_bytesize(str))
+	ssize_t written = write(fd, data->data, data->bytesize);
+	if (written == -1 || (size_t)written != data->bytesize)
 		res = false;
 	close(fd);
 	return (res);
 }
+/* Append a sting at the end of a file. */
+bool yfile_append_string(const char *path, const char *str) {
+	bool res = true;
+	size_t len;
 
+	if (!path)
+		return (false);
+	if (!str || !(len = strlen(str)))
+		return (true);
+	int fd = open(path, O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR);
+	if (fd == -1)
+		return (false);
+	ssize_t written = write(fd, str, len);
+	if (written == -1 || (size_t)written != len)
+		res = false;
+	close(fd);
+	return (res);
+}
+/* Tell if a file contains a given file. */
+bool yfile_contains(const char *path, const char *str) {
+	ystr_t ys = yfile_get_string_contents(path);
+	if (!ys)
+		return (false);
+	bool result = false;
+	if (strstr(ys, str))
+		result = true;
+	ys_free(ys);
+	return (result);
+}

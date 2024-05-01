@@ -40,6 +40,7 @@ typedef struct ytable_s {
  *		Create a new ytable, initialized to the default size.
  * @return	A pointer to the allocated ytable.
  */
+
 ytable_t *ytable_new(void);
 /**
  * @function	ytable_create
@@ -228,7 +229,7 @@ bool ytable_key_isset(ytable_t *table, const char *key);
  * @param	key	String key of the search element.
  * @return	YENOERR if the element exists, and a pointer to the element's data.
  *		YEINVAL if the table doesn't exist.
- *		YEUNDEF if the index doesn't exist.
+ *		YEUNDEF if the key doesn't exist.
  */
 yres_pointer_t ytable_get_key(ytable_t *table, const char *key);
 /**

@@ -3,17 +3,18 @@
 # ###################################
 
 # Executable names
-NAME			= agent
-NAME_LINUX_X86_32	= agent-linux-i386
-NAME_LINUX_X86_64	= agent-linux-x86_64
-NAME_LINUX_ARM_32	= agent-linux-arm_32
-NAME_LINUX_ARM_64	= agent-linux-arm_64
-NAME_LINUX_RISCV_64	= agent-linux-riscv_64
-NAME_MACOS_X86_64	= agent-macos-x86_64
-NAME_MACOS_ARM_64	= agent-macos-arm_64
+NAME			= arkiv_agent
+NAME_LINUX_X86_32	= arkiv_agent-linux-i386
+NAME_LINUX_X86_64	= arkiv_agent-linux-x86_64
+NAME_LINUX_ARM_32	= arkiv_agent-linux-arm_32
+NAME_LINUX_ARM_64	= arkiv_agent-linux-arm_64
+NAME_LINUX_RISCV_64	= arkiv_agent-linux-riscv_64
+NAME_MACOS_X86_64	= arkiv_agent-macos-x86_64
+NAME_MACOS_ARM_64	= arkiv_agent-macos-arm_64
 
 # Source files
 SRC	=	main.c		\
+		agent.c		\
 		configuration.c	\
 		api.c
 
@@ -65,7 +66,7 @@ LDFLAGS	= $(EXEOPT) $(LDPATH)
 
 # ###################################################################
 
-.PHONY: dev clean all
+.PHONY: dev clean all alldev
 
 # dynamic linking
 $(NAME): $(OBJS)
@@ -124,8 +125,11 @@ $(NAME_MACOS_ARM_64): $(NAME)
 clean:
 	rm -f $(NAME) $(NAME_LINUX_X86_32) $(NAME_LINUX_X86_64) $(NAME_LINUX_ARM_32) $(NAME_LINUX_ARM_64) $(NAME_LINUX_RISCV_64) $(NAME_MACOS_X86_64) $(NAME_MACOS_ARM_64) $(OBJS) *~ ../bin/$(NAME)
 
-# cleaning and compilation
+# cleaning and compiling
 all: clean $(NAME)
+
+# cleaning and compiling (dev mode)
+alldev: clean dev
 
 # objet files compilation
 .c.o:

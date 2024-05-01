@@ -10,19 +10,38 @@
 #include "yexec.h"
 #include "yjson.h"
 #include "yfile.h"
+#include "agent.h"
 #include "api.h"
 #include "configuration.h"
 
-/* Size of organization keys. */
+/** @const _ORG_KEY_LENGTH	 	Size of organization keys (45). */
 #define _ORG_KEY_LENGTH			4
-/* Default backup path. */
-#define	_DEFAULT_BACKUP_PATH		"/var/archives"
-/* Minimum size of encryption password. */
+/** @const _MINIMUM_CRYPTPWD_LENGTH	Minimum size of encryption password. */
 #define _MINIMUM_CRYPTPWD_LENGTH	24
-/* Destination JSON path. */
-#define	_JSON_PATH			"/opt/arkiv/etc/arkiv.json"
-/* URL of the server declaration API. */
-#define _SERVER_DECLARE_API		"https://api.arkiv.sh/v1/agent/declare"
+/** @const _CRONTAB_SCRIPT		Content of the /etc/cron.hourly/arkiv_agent or /etc/cron.d/arkiv_agent file. */
+#define _CRONTAB_SCRIPT			"#!/bin/sh\n\n" \
+					"# Arkiv agent hourly execution\n" \
+					"# This program backups the local computer, using the Arkiv.sh service\n" \
+					"# See https://www.arkiv.sh for more information\n" \
+					"/opt/arkiv/bin/agent backup\n"
+/** @const _CRONTAB_LINE		Crontab execution line. */
+#define _CRONTAB_LINE			"\n# Arkiv agent hourly execution\n" \
+					"# This program backups the local computer, using the Arkiv.sh service\n" \
+					"# See https://www.arkiv.sh for more information\n" \
+					"0 * * * *    root    /opt/arkiv/bin/agent backup\n"
+
+/**
+ * @typedef	_config_crontab_t
+ * @abstract	Type of cron installation.
+ * @field	CONFIG_CRON_HOURLY	/etc/cron.hourly
+ * @field	CONFIG_CRON_D		/etc/cron.d
+ * @field	CONFIG_CRON_CRONTAB	/etc/crontab
+ */
+typedef enum {
+	CONFIG_CRON_HOURLY,
+	CONFIG_CRON_D,
+	CONFIG_CRON_CRONTAB
+} _config_crontab_t;
 
 /* Checks if the tar program is installed. */
 static void _config_check_tar(void);
@@ -34,57 +53,47 @@ static void _config_check_z(void);
 static void _config_check_crypt(void);
 /* Checks if web communication programs are installed. */
 static void _config_check_web(void);
+/* Checks if a crontab execution can be planned. */
+static _config_crontab_t _config_check_cron(void);
 /* Asks for the organization key. */
 static ystr_t _config_ask_orgkey(void);
 /* Asks for the hostname. */
 static ystr_t _config_ask_hostname(void);
-/* Asks for the backup path. */
-static ystr_t _config_ask_backup_path(void);
+/* Asks for the local archives path. */
+static ystr_t _config_ask_archives_path(agent_t *agent);
+/* Asks for the log file. */
+static ystr_t _config_ask_log_file(agent_t *agent);
+/* Asks for syslog. */
+static ystr_t _config_ask_syslog(void);
 /* Asks for the encryption password. */
 static ystr_t _config_ask_encryption_password(void);
 /* Writes the JSON configuration file. */
-static bool _config_write_json_file(const char *orgKey, const char *hostname, const char *backupPath, const char *cryptPwd);
-/* Declares the server to arkiv.sh API. */
-static bool _config_declare_server(const char *orgKey, const char *hostname);
+static void _config_write_json_file(const char *orgKey, const char *hostname, const char *archives_path, const char *syslog, const char *logfile, const char *cryptPwd);
 /* Add the agent execution to the crontab. */
-static ystatus_t _config_add_to_crontab(void);
+static void _config_add_to_crontab(_config_crontab_t cronType);
 
 /* ********** PUBLIC FUNCTIONS ********** */
-/**
- * @function	_config_declare_server
- * @abstract	Declares the server to arkiv.sh API.
- * @param	orgKey		Organization key.
- * @param	hostname	Hostname.
- * @return	True if everything is fine.
- */
-bool _config_declare_server(const char *orgKey, const char *hostname) {
-	
-	printf("Declare the server to " YANSI_PURPLE "arkiv.sh" YANSI_RESET "... ");
-	if (api_server_declare(hostname, orgKey) == YENOERR) {
-		printf(YANSI_GREEN "done\n" YANSI_RESET);
-		return (true);
-	}
-	printf(YANSI_RED "failed. Please try again.\n" YANSI_RESET);
-	return (false);
-}
 /* Main function for configuration file generation. */
-void exec_configuration(void) {
+void exec_configuration(agent_t *agent) {
+	_config_crontab_t cronType;
 	ystr_t orgKey = NULL;
 	ystr_t hostname = NULL;
-	ystr_t backupPath = NULL;
+	ystr_t archives_path = NULL;
+	ystr_t logfile = NULL;
+	ystr_t syslog = NULL;
 	ystr_t cryptPwd = NULL;
 
 	// splashscreen
 	printf("\n");
-	printf(YANSI_BG_BLUE "%70c" YANSI_RESET "\n", ' ');
-	printf(YANSI_BG_BLUE YANSI_WHITE "%23c%s%22c" YANSI_RESET "\n", ' ', "Arkiv agent configuration", ' ');
-	printf(YANSI_BG_BLUE "%70c" YANSI_RESET "\n", ' ');
+	printf(YANSI_BG_BLUE "%80c" YANSI_RESET "\n", ' ');
+	printf(YANSI_BG_BLUE YANSI_WHITE "%28c%s%27c" YANSI_RESET "\n", ' ', "Arkiv agent configuration", ' ');
+	printf(YANSI_BG_BLUE "%80c" YANSI_RESET "\n", ' ');
 	printf("\n");
 
 	/* programs check */
 	// tar
 	_config_check_tar();
-	// msha512sum
+	// sha512sum
 	_config_check_sha512sum();
 	// compression programs
 	_config_check_z();
@@ -92,6 +101,8 @@ void exec_configuration(void) {
 	_config_check_crypt();
 	// web communication programs
 	_config_check_web();
+	// crontab
+	cronType = _config_check_cron();
 
 	/* needed user inputs */
 	// ask for the organization key
@@ -99,21 +110,28 @@ void exec_configuration(void) {
 	// hostname
 	hostname = _config_ask_hostname();
 	// backup path
-	backupPath = _config_ask_backup_path();
+	archives_path = _config_ask_archives_path(agent);
+	// log file
+	logfile = _config_ask_log_file(agent);
+	// syslog
+	syslog = _config_ask_syslog();
 	// encryption password
+	printf("\n");
 	cryptPwd = _config_ask_encryption_password();
+	printf("\n");
 	// write JSON file
-	if (!_config_write_json_file(orgKey, hostname, backupPath, cryptPwd))
-		goto cleanup;
+	_config_write_json_file(orgKey, hostname, archives_path, logfile, syslog, cryptPwd);
 	// declare the server to arkiv.sh
-	if (!_config_declare_server(orgKey, hostname))
-		goto cleanup;
+	config_declare_server(orgKey, hostname);
 	// add agent to crontab
-	_config_add_to_crontab();
-cleanup:
+	_config_add_to_crontab(cronType);
+
+	/* cleanup */
 	ys_free(hostname);
 	ys_free(orgKey);
-	ys_free(backupPath);
+	ys_free(archives_path);
+	ys_free(logfile);
+	ys_free(syslog);
 	ys_free(cryptPwd);
 }
 /* Tells if a given program is installed. */
@@ -158,6 +176,19 @@ ystr_t config_get_program_path(const char *binName) {
 	ybin_delete_data(&data);
 	return (path);
 }
+/* Declares the server to arkiv.sh API. */
+void config_declare_server(const char *orgKey, const char *hostname) {
+	printf("‣ Declare the server to " YANSI_PURPLE "arkiv.sh" YANSI_RESET "... ");
+	if (api_server_declare(hostname, orgKey) != YENOERR) {
+		printf(
+			YANSI_RED "failed\n\n" YANSI_RESET
+			YANSI_FAINT "  Check the organization key and try again.\n\n" YANSI_RESET
+			YANSI_RED "Abort.\n" YANSI_RESET
+		);
+		exit(2);
+	}
+	printf(YANSI_GREEN "done\n" YANSI_RESET);
+}
 
 /* ********** STATIC FUNCTIONS ********** */
 /**
@@ -173,7 +204,7 @@ static void _config_check_tar(void) {
 	       YANSI_PURPLE "/usr/local/bin/tar" YANSI_RESET ") and try again.\n");
 	printf(YANSI_FAINT "See " YANSI_LINK " for more information.\n\n" YANSI_RESET, "https://doc.arkiv.sh/agent/install", "the documentation");
 	printf(YANSI_RED "Abort\n" YANSI_RESET);
-	exit(1);
+	exit(2);
 }
 /**
  * @function	_config_check_sh256sum
@@ -188,7 +219,7 @@ static void _config_check_sha512sum(void) {
 	       YANSI_PURPLE "/usr/local/bin/sha512sum" YANSI_RESET ") and try again.\n");
 	printf(YANSI_FAINT "See " YANSI_LINK " for more information.\n\n" YANSI_RESET, "https://doc.arkiv.sh/agent/install", "the documentation");
 	printf(YANSI_RED "Abort\n" YANSI_RESET);
-	exit(1);
+	exit(2);
 }
 /**
  * @header	_config_check_z
@@ -246,7 +277,7 @@ static void _config_check_crypt(void) {
 		       YANSI_GOLD "gpg" YANSI_RESET " in a standard location (" YANSI_PURPLE "/bin" YANSI_RESET ", "
 		       YANSI_PURPLE "/usr/bin" YANSI_RESET " or " YANSI_PURPLE "/usr/local/bin" YANSI_RESET ").\n\n");
 		printf(YANSI_RED "Abort.\n" YANSI_RESET);
-		exit(3);
+		exit(2);
 	}
 	printf("Here are the encryption software installed on this server:\n");
 	printf("%s openssl  " YANSI_RESET, (hasOpenssl ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
@@ -281,7 +312,27 @@ static void _config_check_web(void) {
 	       " in a standard location (" YANSI_PURPLE "/bin" YANSI_RESET ", " YANSI_PURPLE "/usr/bin" YANSI_RESET
 	       " or " YANSI_PURPLE "/usr/local/bin" YANSI_RESET ").\n\n");
 	printf(YANSI_RED "Abort.\n" YANSI_RESET);
-	exit(4);
+	exit(2);
+}
+/**
+ * @function	_config_check_cron
+ * @abstract	Checks if a crontab execution can be planned.
+ * @return	The type of crontab installation.
+ */
+static _config_crontab_t _config_check_cron(void) {
+	if (yfile_is_dir("/etc/cron.hourly") && yfile_is_writable("/etc/cron.hourly"))
+		return (CONFIG_CRON_HOURLY);
+	if (yfile_is_dir("/etc/cron.d") && yfile_is_writable("/etc/cron.d"))
+		return (CONFIG_CRON_D);
+	if (yfile_exists("/etc/crontab") && yfile_is_writable("/etc/crontab"))
+		return (CONFIG_CRON_CRONTAB);
+	printf("\n" YANSI_BG_RED " Unable to find any writable crontab file " YANSI_RESET "\n\n");
+	printf("It should be available under the directories " YANSI_YELLOW "/etc/cron.hourly" YANSI_RESET
+	       " or " YANSI_YELLOW "/etc/cron.d" YANSI_RESET ",\nor the file " YANSI_YELLOW "/etc/crontab" YANSI_RESET
+	       ".\n\n");
+	printf(YANSI_BOLD "Maybe you forgot to execute the agent program as root?\n\n" YANSI_RESET);
+	printf(YANSI_RED "Abort.\n" YANSI_RESET);
+	exit(2);
 }
 /**
  * @function	_config_ask_orgkey
@@ -292,11 +343,12 @@ static ystr_t _config_ask_orgkey(void) {
 	ystr_t ys = NULL;
 
 	for (; ; ) {
-		printf("Please, enter your organization key (40 characters-long string):\n" YANSI_BLUE);
+		printf("Please, enter your organization key (45 characters-long string):\n" YANSI_BLUE);
 		ys_gets(&ys, stdin);
 		printf(YANSI_RESET);
 		ys_trim(ys);
-		if (ys_bytesize(ys) == _ORG_KEY_LENGTH)
+		size_t keySize = ys_bytesize(ys);
+		if (keySize == _ORG_KEY_LENGTH)
 			return (ys);
 		printf(YANSI_RED "Bad key (should be %d characters long)\n\n" YANSI_RESET, _ORG_KEY_LENGTH);
 	}
@@ -336,21 +388,94 @@ static ystr_t _config_ask_hostname(void) {
 	return (hostname);
 }
 /**
- * @function	_config_ask_backup_path
- * @abstract	Asks for the backup path.
- * @return	The backup path.
+ * @function	_config_ask_archives_path
+ * @abstract	Asks for the local archives path.
+ * @param	agent	Pointer to the agent structure.
+ * @return	The archives path.
  */
-static ystr_t _config_ask_backup_path(void) {
+static ystr_t _config_ask_archives_path(agent_t *agent) {
 	ystr_t ys = NULL;
 
-	printf("Path to the local backup directory? [" YANSI_YELLOW _DEFAULT_BACKUP_PATH YANSI_RESET "]\n" YANSI_BLUE);
+	printf("Path to the local archives directory? [" YANSI_YELLOW "%s" YANSI_RESET "]\n" YANSI_BLUE, agent->conf.archives_path);
 	ys_gets(&ys, stdin);
 	printf(YANSI_RESET);
 	ys_trim(ys);
 	if (!ys_empty(ys))
 		return (ys);
 	ys_free(ys);
-	return (ys_copy(_DEFAULT_BACKUP_PATH));
+	return (ys_copy(A_PATH_ARCHIVES));
+}
+/**
+ * @function	_config_ask_log_file
+ * @bastract	Asks for the log file.
+ * @param	agent	Pointer to the agent structure.
+ * @return	The log file's path.
+ */
+static ystr_t _config_ask_log_file(agent_t *agent) {
+	ystr_t ys = NULL;
+
+	printf("Path to the log file? [" YANSI_YELLOW "%s" YANSI_RESET "]\n" YANSI_BLUE, agent->conf.logfile);
+	ys_gets(&ys, stdin);
+	printf(YANSI_RESET);
+	ys_trim(ys);
+	if (!ys_empty(ys))
+		return (ys);
+	ys_free(ys);
+	return (ys_copy(A_PATH_LOGFILE));
+}
+/**
+ * @function	_config_ask_syslog
+ * @abstract	Asks for syslog.
+ * @return	The syslog facility, or NULL if syslog is not used.
+ */
+static ystr_t _config_ask_syslog(void) {
+	ystr_t ys = NULL;
+
+	// ask for syslog
+	while (true) {
+		printf("Do you want to send logs to syslog? [" YANSI_YELLOW "y" YANSI_RESET
+		       "/" YANSI_YELLOW "N" YANSI_RESET "]\n" YANSI_BLUE);
+		ys_gets(&ys, stdin);
+		printf(YANSI_RESET);
+		ys_trim(ys);
+		if (!ys_empty(ys) && strcmp(ys, "n") && strcmp(ys, "N") && strcmp(ys, "y") && strcmp(ys, "Y")) {
+			printf(YANSI_RED "Incorrect value. Try again.\n" YANSI_RESET);
+			continue;
+		}
+		if (ys_empty(ys) || !strcmp(ys, "n") || !strcmp(ys, "N")) {
+			ys_free(ys);
+			return (NULL);
+		}
+		break;
+	}
+	// ask for syslog facility
+	while (true) {
+		printf(
+			"Which syslog facility do you want to use? ["
+			YANSI_YELLOW "USER" YANSI_RESET ", "
+			YANSI_YELLOW "LOCAL0" YANSI_RESET " to "
+			YANSI_YELLOW "LOCAL7" YANSI_RESET
+			"] (press ENTER for USER)\n"
+			YANSI_BLUE
+		);
+		ys_gets(&ys, stdin);
+		printf(YANSI_RESET);
+		ys_trim(ys);
+		// check answer
+		if (!ys_empty(ys) && strcmp(ys, "USER") && strcmp(ys, "LOCAL0") && strcmp(ys, "LOCAL1") &&
+		    strcmp(ys, "LOCAL2") && strcmp(ys, "LOCAL3") && strcmp(ys, "LOCAL4") &&
+		    strcmp(ys, "LOCAL5") && strcmp(ys, "LOCAL6") && strcmp(ys, "LOCAL7")) {
+			printf(YANSI_RED "Incorrect value. Try again.\n" YANSI_RESET);
+			continue;
+		}
+		// manage default value
+		if (ys_empty(ys) && ys_append(&ys, "USER") != YENOERR) {
+			printf(YANSI_RED "Memory allocation error. Abort.\n" YANSI_RESET);
+			exit(2);
+		}
+		break;
+	}
+	return (ys);
 }
 /**
  * @function	_config_ask_encryption_password
@@ -361,7 +486,7 @@ static ystr_t _config_ask_encryption_password(void) {
 	ystr_t ys = NULL;
 
 	for (; ; ) {
-		printf("\nPlease enter your encryption password. "
+		printf("Please enter your encryption password. "
 		       "It must be at least 24 characters long (40 characters is recommended).\n");
 		printf("You can generate a strong password with this command: "
 		       YANSI_TEAL "head -c 32 /dev/urandom | base64\n" YANSI_RESET YANSI_BLUE);
@@ -378,36 +503,80 @@ static ystr_t _config_ask_encryption_password(void) {
 /**
  * @function	_config_write_json_file
  * @abstract	Writes the JSON configuration file.
- * @param	orgKey		Organization key.
+ * @param	org_key		Organization key.
  * @param	hostname	Hostname.
- * @param	backupPath	Backup path.
- * @param	cryptPwd	Encryption password.
- * @return	True if everything is fine.
+ * @param	archives_path	Archives path.
+ * @param	logfile		Log file's path.
+ * @param	syslog		Syslog facility, or NULL if syslog is not used.
+ * @param	crypt_pwd	Encryption password.
  */
-static bool _config_write_json_file(const char *orgKey, const char *hostname, const char *backupPath, const char *cryptPwd) {
-	bool res = true;
+static void _config_write_json_file(const char *org_key, const char *hostname, const char *archives_path,
+                                    const char *logfile, const char *syslog, const char *crypt_pwd) {
 	yvar_t *config = yvar_new_table(NULL);
 	ytable_t *table = yvar_get_table(config);
-	ytable_set_key(table, "org_key", yvar_new_const_string(orgKey));
-	ytable_set_key(table, "hostname", yvar_new_const_string(hostname));
-	ytable_set_key(table, "backup_path", yvar_new_const_string(backupPath));
-	ytable_set_key(table, "crypt_pwd", yvar_new_const_string(cryptPwd));
-	printf("\nWriting configuration file " YANSI_PURPLE _JSON_PATH YANSI_RESET "... ");
-	if (yfile_touch(_JSON_PATH, 0600, 0700) && yjson_write(_JSON_PATH, config, true) == YENOERR)
-		printf(YANSI_GREEN "done\n" YANSI_RESET);
-	else {
-		printf(YANSI_RED "failed. Please try again.\n" YANSI_RESET);
-		res = false;
+	ytable_set_key(table, A_JSON_ORG_KEY, yvar_new_const_string(org_key));
+	ytable_set_key(table, A_JSON_HOSTNAME, yvar_new_const_string(hostname));
+	ytable_set_key(table, A_JSON_ARCHIVES_PATH, yvar_new_const_string(archives_path));
+	ytable_set_key(table, A_JSON_LOGFILE, yvar_new_const_string(logfile));
+	ytable_set_key(table, A_JSON_SYSLOG, syslog ? yvar_new_const_string(syslog) : yvar_new_bool(false));
+	ytable_set_key(table, A_JSON_CRYPT_PWD, yvar_new_const_string(crypt_pwd));
+	printf("‣ Writing configuration file " YANSI_PURPLE A_PATH_AGENT_CONFIG YANSI_RESET "... ");
+	if (!yfile_touch(A_PATH_AGENT_CONFIG, 0600, 0700) ||
+	    yjson_write(A_PATH_AGENT_CONFIG, config, true) != YENOERR) {
+		printf(YANSI_RED "failed. Please try again.\n\n" YANSI_RESET);
+		printf(YANSI_RED "Abort.\n" YANSI_RESET);
+		exit(2);
 	}
+	printf(YANSI_GREEN "done\n" YANSI_RESET);
 	ytable_free(table);
-	return (res);
 }
 /**
  * @function	_config_add_to_crontab
  * @abstract	Check if the agent execution is already in crontab. If not, add it.
+ * @param	cronType	Type of available crontab.
  * @return	YENOERR if the agent execution was in crontab or has been added successfully.
  */
-static ystatus_t _config_add_to_crontab(void) {
-	return (YENOERR);
+static void _config_add_to_crontab(_config_crontab_t cronType) {
+	// search for /etc/cron.hourly directory
+	if (cronType == CONFIG_CRON_HOURLY) {
+		printf("‣ Add to crontab (file " YANSI_PURPLE A_CRON_HOURLY_PATH YANSI_RESET ")... ");
+		if (yfile_put_string(A_CRON_HOURLY_PATH, _CRONTAB_SCRIPT) &&
+		    !chmod(A_CRON_HOURLY_PATH, 0755)) {
+			printf(YANSI_GREEN "done\n" YANSI_RESET);
+			return;
+		}
+		unlink(A_CRON_HOURLY_PATH);
+		printf(YANSI_RED "failed. Please try again.\n\n" YANSI_RESET);
+		printf(YANSI_RED "Abort.\n" YANSI_RESET);
+		exit(2);
+	}
+	// search for /etc/cron.d directory
+	if (cronType == CONFIG_CRON_D) {
+		printf("‣ Add to crontab (file " YANSI_PURPLE A_CRON_D_PATH YANSI_RESET ")... ");
+		if (yfile_put_string(A_CRON_D_PATH, _CRONTAB_LINE) &&
+		    !chmod(A_CRON_D_PATH, 0644)) {
+			printf(YANSI_GREEN "done\n" YANSI_RESET);
+			return;
+		}
+		unlink(A_CRON_D_PATH);
+		printf(YANSI_RED "failed. Please try again.\n\n" YANSI_RESET);
+		printf(YANSI_RED "Abort.\n" YANSI_RESET);
+		exit(2);
+	}
+	// search for /etc/crontab file
+	if (cronType == CONFIG_CRON_CRONTAB) {
+		printf("‣ Add to crontab (file " YANSI_PURPLE A_CRON_ETC_PATH YANSI_RESET ")... ");
+		if (yfile_contains(A_CRON_ETC_PATH, _CRONTAB_LINE)) {
+			printf(YANSI_GREEN "already done\n" YANSI_RESET);
+			return;
+		}
+		if (yfile_append_string(A_CRON_ETC_PATH, _CRONTAB_LINE)) {
+			printf(YANSI_GREEN "done\n" YANSI_RESET);
+			return;
+		}
+		printf(YANSI_RED "failed. Please try again.\n\n" YANSI_RESET);
+		printf(YANSI_RED "Abort.\n" YANSI_RESET);
+		exit(2);
+	}
 }
 

@@ -7,53 +7,64 @@
  * loglevel=WARN ./agent
  *
  * @author	Amaury Bouchard <amaury@amaury.net>
- * @copyright	© 2019, Amaury Bouchard
+ * @copyright	© 2019-2024, Amaury Bouchard
  */
 
-//#include "agent.h"
-//#include "http.h"
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include "yansi.h"
-#include "configuration.h"
 #include "agent.h"
+#include "configuration.h"
 
 /* *** declaration of private functions *** */
-void _agent_usage(char *progname);
+void _agent_usage(const char *progname);
 //agent_t *_agent_new(void);
 //void _agent_free(agent_t *agent);
 
-/** Constant: CLI option for configuration. */
-#define	OPT_CONFIG	"config"
-/** Constant: CLI option for declaration. */
-#define OPT_DECLARE	"declare"
-/** Constant: CLI option for backup. */
-#define	OPT_BACKUP	"backup"
-/** Constant: CLI option for restore. */
-#define	OPT_RESTORE	"restore"
+typedef enum {
+	A_TYPE_USAGE = 0,
+	A_TYPE_CONFIG,
+	A_TYPE_DECLARE,
+	A_TYPE_BACKUP,
+	A_TYPE_RESTORE
+} exec_type_t;
 
 /**
  * Main function of the program.
  */
 int main(int argc, char *argv[]) {
-	printf("'%s'\n", A_API_URL_SERVER_PARAMS);
-	exit(0);
+	// agent structure allocation and initialization
+	agent_t *agent = agent_new(argv[0]);
 
-	// management of execution option
-	if (argc == 2 && !strcmp(argv[1], OPT_CONFIG)) {
-		exec_configuration();
-	} else if (argc == 2 && !strcmp(argv[1], OPT_BACKUP)) {
-		printf("agent declare\n");
-	/*} else if (argc == 2 && !strcmp(argv[1], OPT_BACKUP)) {
-		printf("agent_backup();\n");
-	} else (argc == 3 && !strcmp(argv[1], OPT_RESTORE)) {
-		printf("agent_restore(argv[2]);\n");*/
+	// check command-line arguments
+	exec_type_t exec_type = (
+		(argc == 2 && !strcmp(argv[1], A_OPT_CONFIG)) ? A_TYPE_CONFIG :
+		(argc == 2 && !strcmp(argv[1], A_OPT_DECLARE)) ? A_TYPE_DECLARE :
+		(argc == 2 && !strcmp(argv[1], A_OPT_BACKUP)) ? A_TYPE_BACKUP :
+		(argc == 3 && !strcmp(argv[1], A_OPT_RESTORE)) ? A_TYPE_RESTORE :
+		A_TYPE_USAGE
+	);
+	// execution
+	if (exec_type == A_TYPE_USAGE) {
+		// usage
+		_agent_usage(agent->agent_path);
+	} else if (exec_type == A_TYPE_CONFIG) {
+		// configuration
+		exec_configuration(agent);
 	} else {
-		// bad option: display usage and quit
-		_agent_usage(argv[0]);
-		exit(1);
+		// load configuration file
+		agent_load_configuration(agent);
+		// execution
+		if (exec_type == A_TYPE_DECLARE) {
+			printf("agent declare\n");
+		} else if (exec_type == A_TYPE_BACKUP) {
+			printf("agent_backup();\n");
+		} else if (exec_type == A_TYPE_RESTORE) {
+			printf("agent_restore(argv[2]);\n");
+		}
 	}
+	agent_free(agent);
 	return (0);
 }
 
@@ -152,77 +163,121 @@ cleanup:
  * Display documentation.
  * @param	progname	Name of the executed program.
  */
-void _agent_usage(char *progname) {
+void _agent_usage(const char *progname) {
 	printf("\n");
 	printf(YANSI_BG_BLUE "%80c" YANSI_RESET "\n", ' ');
 	printf(YANSI_BG_BLUE YANSI_WHITE "%31c%s%30c" YANSI_RESET "\n", ' ', "Arkiv.sh agent help", ' ');
 	printf(YANSI_BG_BLUE "%80c" YANSI_RESET "\n", ' ');
 	printf("\n");
-	printf(YANSI_BLUE "  arkiv-agent " YANSI_RESET
-	       "is a program used to backup a computer, using the parameters\n"
-	       "  declared on the "
-	       YANSI_UNDERLINE "Arkiv.sh" YANSI_RESET
-	       " service. It shoud be called automatically (by the\n  cron daemon) "
-	       "and not by a user, appart from during its installation process.\n\n"
-
-	       YANSI_BG_GRAY YANSI_WHITE " Usage " YANSI_RESET "\n\n"
-	       YANSI_FAINT "  [envvars] " YANSI_RESET
-	       YANSI_BLUE "/usr/local/bin/arkiv-agent " YANSI_RESET
-	       YANSI_YELLOW "[mode]\n" YANSI_RESET
-	       "\n"
-
-	       YANSI_BG_GRAY YANSI_WHITE " Execution mode " YANSI_RESET "\n\n"
-	       YANSI_YELLOW "  help\n" YANSI_RESET
-	       "  Display this help. Same effect if the mode is not specified.\n\n"
-	       YANSI_YELLOW "  config\n" YANSI_RESET
-	       "  Ask questions in order to create the Arkiv configuration file, then declare\n"
-	       "  the local machine up to the Arkiv.sh service.\n\n"
-	       YANSI_YELLOW "  declare\n" YANSI_RESET
-	       "  Declare the local server to the Arkiv.sh service.\n"
-	       "  Useful when the configuration is cloned and the " YANSI_YELLOW "config" YANSI_RESET
-	       " command was not used.\n\n"
-	       YANSI_YELLOW "  backup\n" YANSI_RESET
-	       "  Perform the backup configured on Arkiv.sh service for this machine.\n"
-	       "  SHould be called by the cron daemon only.\n\n"
-	       YANSI_YELLOW "  restore latest|identifier\n" YANSI_RESET
-	       "  Perform the restore of the lastest backup or the backup with the\n"
-	       "  given identifier.\n\n"
-
-	       YANSI_BG_GRAY YANSI_WHITE " Environment variables " YANSI_RESET "\n\n"
-	       YANSI_FAINT "  conf=/path/to/conf.ini\n" YANSI_RESET
-	       YANSI_RED "  Path to the configuration file\n" YANSI_RESET
-	       "  Default value: /opt/arkiv/etc/agent.ini\n\n"
-	       YANSI_FAINT "  logfile=/path/to/file.log\n" YANSI_RESET
-	       YANSI_RED "  Path to the log file\n" YANSI_RESET
-	       "  Default value: /opt/arkiv/log/agent.log\n\n"
-	       YANSI_FAINT "  debug_mode=true|yes|on|1\n" YANSI_RESET
-	       YANSI_RED "  Activation of the debug mode\n" YANSI_RESET
-	       "  Set log level to 'DEBUG' and display message on stderr.\n"
-	       "  Any value other than 'true', 'yes', 'on' or '1' would be "
-	       "interpreted as false.\n"
-	       "  Default value: false\n"
-	       "\n"
-
-	       YANSI_BG_GRAY YANSI_WHITE " Examples " YANSI_RESET "\n\n"
-	       "  Default:\n"
-	       YANSI_BLUE "  /opt/arkiv/bin/agent " YANSI_RESET
-	       YANSI_YELLOW "backup\n\n" YANSI_RESET
-	       "  Set log level and log file:\n"
-	       YANSI_FAINT "  loglevel=WARN logfile=/root/arkiv.log " YANSI_RESET
-	       YANSI_BLUE "/opt/arkiv/bin/agent " YANSI_RESET
-	       YANSI_YELLOW "backup\n\n" YANSI_RESET
-	       "  Use an alternate configuration:\n"
-	       YANSI_FAINT "  conf=/root/arkiv.ini " YANSI_RESET
-	       YANSI_BLUE "/opt/arkiv/bin/agent " YANSI_RESET
-	       YANSI_YELLOW "backup\n\n" YANSI_RESET
-	       "  Activate the debug mode, with a specific log file:\n"
-	       YANSI_FAINT "  debug_mode=true logfile=/root/arkiv.log " YANSI_RESET
-	       YANSI_BLUE "/opt/arkiv/bin/agent " YANSI_RESET
-	       YANSI_YELLOW "backup\n\n" YANSI_RESET
-	       "  Install the client (should not be executed directly):\n"
-	       YANSI_BLUE "  /opt/arkiv/bin/agent " YANSI_RESET
-	       YANSI_YELLOW "install\n" YANSI_RESET
-	       "\n");
+	printf(
+		YANSI_BOLD "  arkiv-agent " YANSI_RESET
+		"is a program used to backup a computer, using the parameters\n"
+		"  declared on the " YANSI_FAINT "Arkiv.sh" YANSI_RESET
+		" service. It shoud be called automatically (by the\n"
+		"  cron daemon) and not by a user, appart from during its installation process.\n\n"
+	);
+	printf(
+		YANSI_BG_GRAY YANSI_WHITE " Account creation " YANSI_RESET "\n\n"
+		"  Before you install and configure the Arkiv agent, you need to create your\n"
+		"  account on the " YANSI_LINK_STATIC("https://www.arkiv.sh/", "Arkiv.sh") " website. "
+		"Free accounts allow to manage one server.\n"
+		"  You will need to retrieve the " YANSI_FAINT "organization key" YANSI_RESET
+		" provided by the service.\n\n"
+	);
+	printf(
+		YANSI_BG_GRAY YANSI_WHITE " User rights " YANSI_RESET "\n\n"
+		"  The Arkiv agent should be run by the " YANSI_FAINT "root" YANSI_RESET
+		" user, or any other user with\n  sufficient access rights.\n\n"
+	);
+	printf(
+		YANSI_BG_GRAY YANSI_WHITE " Usage " YANSI_RESET "\n\n"
+		YANSI_FAINT "  [envvars] " YANSI_RESET
+		YANSI_GREEN "%s" YANSI_RESET
+		YANSI_YELLOW " [mode]\n" YANSI_RESET
+		"\n",
+		progname
+	);
+	printf(
+		YANSI_BG_GRAY YANSI_WHITE " Execution mode " YANSI_RESET "\n\n"
+		YANSI_YELLOW "  help\n" YANSI_RESET
+		"  Display this help. Same effect if the mode is not specified.\n\n"
+		YANSI_YELLOW "  config\n" YANSI_RESET
+		"  Ask questions in order to create the Arkiv configuration file, then declare\n"
+		"  the local machine up to the Arkiv.sh service.\n\n"
+		YANSI_YELLOW "  declare\n" YANSI_RESET
+		"  Declare the local server to the Arkiv.sh service.\n"
+		"  Useful when the configuration is cloned and the " YANSI_YELLOW "config" YANSI_RESET
+		" command was not used.\n\n"
+		YANSI_YELLOW "  backup\n" YANSI_RESET
+		"  Perform the backup configured on Arkiv.sh service for this machine.\n"
+		"  SHould be called by the cron daemon only.\n\n"
+		YANSI_YELLOW "  restore latest|identifier\n" YANSI_RESET
+		"  Perform the restore of the lastest backup or the backup with the\n"
+		"  given identifier.\n\n"
+	);
+	printf(
+		YANSI_BG_GRAY YANSI_WHITE " Environment variables " YANSI_RESET "\n\n"
+		YANSI_FAINT "  conf=/path/to/conf.ini\n" YANSI_RESET
+		YANSI_RED "  Path to the configuration file\n" YANSI_RESET
+		"  Default value: /opt/arkiv/etc/agent.ini\n\n"
+		YANSI_FAINT "  logfile=/path/to/file.log\n" YANSI_RESET
+		YANSI_RED "  Path to the log file\n" YANSI_RESET
+		"  Default value: /var/log/arkiv-agent.log\n\n"
+		YANSI_FAINT "  syslog=USER|LOCAL0|LOCAL1|LOCAL2|LOCAL3|LOCAL4|LOCAL5|LOCAL6|LOCAL7\n" YANSI_RESET
+		YANSI_RED "  Enabling log on syslog\n" YANSI_RESET
+		"  Sets the log to syslog, in addition to other logging mechanisms. The given\n"
+		"  parameter value is used as the output facility (see "
+		YANSI_LINK_STATIC("https://en.wikipedia.org/wiki/Syslog#Facility", "Wikipedia") ").\n\n"
+		YANSI_FAINT "  debug_mode=true|yes|on|1\n" YANSI_RESET
+		YANSI_RED "  Activation of the debug mode\n" YANSI_RESET
+		"  Set log level to 'DEBUG' and display message on stderr.\n"
+		"  Any value other than 'true', 'yes', 'on', '1' would be "
+		"interpreted as false.\n"
+		"  Default value: false\n\n"
+		YANSI_FAINT "  archives_path=/path/to/dir\n" YANSI_RESET
+		YANSI_RED "  Path to the directory where local archives will be created\n" YANSI_RESET
+		"  Default value: /var/archives\n\n"
+		YANSI_FAINT "  crypt_pwd=...45 characters-long password...\n" YANSI_RESET
+		YANSI_RED "  Encryption password\n" YANSI_RESET
+		"  Used to override the encryption password defined in the configuration file.\n\n"
+	);
+	printf(
+		YANSI_BG_GRAY YANSI_WHITE " Examples " YANSI_RESET "\n\n"
+		"  Start configuration:\n"
+		YANSI_GREEN "  /opt/arkiv/bin/agent " YANSI_RESET
+		YANSI_YELLOW "config\n\n" YANSI_RESET
+		"  Launch backup with default parameters:\n"
+		YANSI_GREEN "  /opt/arkiv/bin/agent " YANSI_RESET
+		YANSI_YELLOW "backup\n\n" YANSI_RESET
+		"  Use a specific log file:\n"
+		YANSI_FAINT "  logfile=/root/arkiv.log " YANSI_RESET
+		YANSI_GREEN "/opt/arkiv/bin/agent " YANSI_RESET
+		YANSI_YELLOW "backup\n\n" YANSI_RESET
+		"  Use an alternative configuration file:\n"
+		YANSI_FAINT "  conf=/root/arkiv.ini " YANSI_RESET
+		YANSI_GREEN "/opt/arkiv/bin/agent " YANSI_RESET
+		YANSI_YELLOW "backup\n\n" YANSI_RESET
+		"  Activate the debug mode, with a specific log file:\n"
+		YANSI_FAINT "  debug_mode=true logfile=/root/arkiv.log " YANSI_RESET
+		YANSI_GREEN "/opt/arkiv/bin/agent " YANSI_RESET
+		YANSI_YELLOW "backup\n\n" YANSI_RESET
+		"  Write log on syslog:\n"
+		YANSI_FAINT "  syslog=USER " YANSI_RESET
+		YANSI_GREEN "/opt/arkiv/bin/agent " YANSI_RESET
+		YANSI_YELLOW "backup\n\n" YANSI_RESET
+	);
+	printf(
+		YANSI_BG_GRAY YANSI_WHITE " Copyright, licence and source code " YANSI_RESET "\n\n"
+		"  The Arkiv agent's source code is copyright © " YANSI_LINK_STATIC("mailto:amaury@amaury.net", "Amaury Bouchard") ".\n\n"
+		"  It is released under the terms of the "
+		YANSI_LINK_STATIC("https://joinup.ec.europa.eu/collection/eupl", "European Union Public Licence")
+		" (EUPL),\n"
+		"  version 1.2 or later. This licence is officially available in 23 languages,\n"
+		"  and is compatible with other well-known licences: GPL (v2, v3), AGPL (v3),\n"
+		"  LGPL (v2.1, v3), CC BY-SA (v3), MPL (v2), EPL (v1), OSL (v2.1, v3), LiLiQ-R\n"
+		"  and LiLiQ-R+, CeCILL (v2.0, v2.1) and many " YANSI_LINK_STATIC("https://joinup.ec.europa.eu/collection/eupl/matrix-eupl-compatible-open-source-licences", "other OSI-approved licences") ".\n\n"
+		"  Arkiv agent's source code could be find here: " YANSI_LINK_STATIC("https://developers.arkiv.sh", "https://developers.arkiv.sh") "\n\n"
+	);
 }
 
 #if 0
