@@ -29,15 +29,17 @@ ystatus_t yexec(const char *command, yarray_t args, yarray_t env,
 	arg_list = malloc0(sizeof(char*) * nbr_args);
 	arg_list[0] = (char*)command;
 	i = 0;
-	for (i = 0; args && i < yarray_length(args); ++i)
+	for (i = 0; args && i < yarray_length(args); ++i) {
 		arg_list[i + 1] = args[i];
+	}
 	arg_list[i + 1] = NULL;
 	// manage environment variables
 	if (env) {
 		size_t nbr_args = yarray_length(env) + 1;
 		env_list = malloc0(sizeof(char*) * nbr_args);
-		for (i = 0; i < yarray_length(env); ++i)
+		for (i = 0; i < yarray_length(env); ++i) {
 			env_list[i] = env[i];
+		}
 		env_list[i] = NULL;
 	}
 	// create a sub-process

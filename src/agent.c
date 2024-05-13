@@ -35,6 +35,8 @@ agent_t *agent_new(char *exe_path) {
 		printf(YANSI_RED "Memory allocation error. Abort." YANSI_RESET);
 		exit(1);
 	}
+	// set execution timestamp
+	agent->exec_timestamp = time(NULL);
 	// set default configuration file
 	agent->conf_path = agent_getenv_static(A_ENV_CONF, A_PATH_AGENT_CONFIG);
 	// set default log file
@@ -43,8 +45,10 @@ agent_t *agent_new(char *exe_path) {
 	agent->conf.archives_path = agent_getenv_static(A_ENV_ARCHIVES_PATH, A_PATH_ARCHIVES);
 	// manage debug mode
 	ystr_t ys = agent_getenv(A_ENV_DEBUG_MODE, NULL);
-	if (STR_IS_TRUE(ys))
+	if (STR_IS_TRUE(ys)) {
 		agent->debug_mode = true;
+		agent->conf.use_stdout = true;
+	}
 	ys_free(ys);
 	/*
 	agent->log.backup_files = yarray_new();
@@ -88,6 +92,16 @@ ystr_t agent_getenv_static(char *envvar, const char *default_value) {
 /* Reads the configuration file. */
 void agent_load_configuration(agent_t *agent) {
 	ystr_t ys = NULL;
+
+	agent->exec_log.pre_scripts = ytable_new();
+	agent->exec_log.backup_files = ytable_new();
+	agent->exec_log.backup_databases = ytable_new();
+	agent->exec_log.post_scripts = ytable_new();
+	if (!agent->exec_log.pre_scripts || !agent->exec_log.backup_files ||
+	    !agent->exec_log.backup_databases || !agent->exec_log.post_scripts) {
+		printf(YANSI_RED "Memory allocation error\n" YANSI_RESET);
+		exit(3);
+	}
 	// read the configuration file
 	ys = yfile_get_string_contents(agent->conf_path);
 	// parsing the configuration file
@@ -140,17 +154,35 @@ void agent_load_configuration(agent_t *agent) {
 	if (!logfile || !yvar_is_string(logfile) || !(ys = yvar_get_string(logfile)) || ys_empty(ys)) {
 		// no log file - write to stdout
 		agent->conf.logfile = NULL;
-		agent->log_fd = stdout;
-		printf(YANSI_RED "Empty log file in configuration file '%s'.\n" YANSI_RESET, agent->conf_path);
-		exit(3);
+		agent->log_fd = NULL;
+		agent->conf.use_stdout = true;
 	} else {
 		agent->conf.logfile = agent_getenv_static(A_ENV_ARCHIVES_PATH, ys);
 		agent->log_fd = fopen(agent->conf.logfile, "a");
 		if (!agent->log_fd)
-			agent->log_fd = stdout;
+			agent->conf.use_stdout = true;
+	}
+	// check stdout
+	ys = agent_getenv(A_ENV_STDOUT, NULL);
+	if (ys) {
+		if (STR_IS_TRUE(ys))
+			agent->conf.use_stdout = true;
+		else
+			agent->conf.use_stdout = false;
+		ys_free(ys);
 	}
 	// check syslog and initialize syslog connection
-	if (syslog && yvar_is_bool(syslog) && yvar_get_bool(syslog) == true) {
+	ys = agent_getenv(A_ENV_SYSLOG, NULL);
+	enum { A_SYSLOG_UNDEF, A_SYSLOG_FORCE, A_SYSLOG_AVOID } use_syslog = A_SYSLOG_AVOID;
+	if (ys) {
+		if (STR_IS_TRUE(ys))
+			use_syslog = A_SYSLOG_FORCE;
+		else
+			use_syslog = A_SYSLOG_AVOID;
+		ys_free(ys);
+	}
+	if (use_syslog == A_SYSLOG_FORCE ||
+	    (use_syslog == A_SYSLOG_UNDEF && syslog && yvar_is_bool(syslog) && yvar_get_bool(syslog) == true)) {
 		agent->conf.use_syslog = true;
 		openlog(A_SYSLOG_IDENT, LOG_CONS, LOG_USER);
 	}

@@ -81,6 +81,15 @@ yres_var_t yjson_parse(yjson_parser_t *json, char *input) {
 	return (res);
 }
 
+/* Starts a JSON parser, returning directly the corresponding yvar or a NULL pointer if any error occurred. */
+yvar_t *yjson_parse_simple(yjson_parser_t *json, char *input) {
+	yres_var_t result = yjson_parse(json, input);
+	if (YRES_STATUS(result) != YENOERR)
+		return (NULL);
+	yvar_t *res = yvar_clone_copy(&YRES_VAL(result));
+	return (res);
+}
+
 /* ********** PRINT/WRITE JSON ********** */
 /* Prints a JSON value node and its subnodes, with newlines and tabulations. */
 void yjson_print(yvar_t *value, bool pretty) {

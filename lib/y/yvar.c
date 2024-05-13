@@ -360,6 +360,15 @@ yvar_t *yvar_clone(yvar_t *var) {
 		return (var->definition->clone_function(var));
 	return (NULL);
 }
+/* Create a copy of a given yvar. Its content is copied, not duplicated. */
+yvar_t *yvar_clone_copy(yvar_t *var) {
+	yvar_t *result;
+	if (!var || !(result = yvar_new_undef()))
+		return (NULL);
+	*result = *var;
+	result->refcount = 1;
+	return (result);
+}
 
 /* Free the memory allocated for a yvar. Stored value is not freed. */
 void yvar_free(yvar_t *var) {
@@ -405,7 +414,7 @@ yvar_type_t yvar_type(const yvar_t *var) {
 /* Tell if a yvar is of the given type. */
 bool yvar_is_a(const yvar_t *var, yvar_type_t type) {
 	if (!var) {
-		if (var->type == YVAR_UNDEF)
+		if (type == YVAR_UNDEF)
 			return (true);
 		return (false);
 	}
@@ -468,6 +477,8 @@ bool yvar_is_object(const yvar_t *var) {
 ystatus_t yvar_cast_to_bool(yvar_t *var) {
 	ystatus_t result = YENOERR;
 
+	if (!var)
+		return (YEUNDEF);
 	if (var->type == YVAR_BOOL)
 		return (YENOERR);
 	switch (var->type) {
@@ -510,6 +521,8 @@ ystatus_t yvar_cast_to_bool(yvar_t *var) {
 ystatus_t yvar_cast_to_int(yvar_t *var) {
 	ystatus_t result = YENOERR;
 
+	if (!var)
+		return (YEUNDEF);
 	if (var->type == YVAR_INT)
 		return (YENOERR);
 	switch (var->type) {
@@ -543,6 +556,8 @@ ystatus_t yvar_cast_to_int(yvar_t *var) {
 ystatus_t yvar_cast_to_float(yvar_t *var) {
 	ystatus_t result = YENOERR;
 
+	if (!var)
+		return (YEUNDEF);
 	if (var->type == YVAR_FLOAT)
 		return (YENOERR);
 	switch (var->type) {
@@ -573,6 +588,8 @@ ystatus_t yvar_cast_to_float(yvar_t *var) {
 ystatus_t yvar_cast_to_string(yvar_t *var) {
 	ystatus_t result = YENOERR;
 
+	if (!var)
+		return (YEUNDEF);
 	if (var->type == YVAR_STRING)
 		return (YENOERR);
 	switch (var->type) {
@@ -611,43 +628,43 @@ ystatus_t yvar_cast_to_string(yvar_t *var) {
 
 /* Return the boolean value of a yvar. */
 bool yvar_get_bool(yvar_t *var) {
-	if (var->type != YVAR_BOOL)
+	if (!var || var->type != YVAR_BOOL)
 		return (false);
 	return (var->bool_value);
 }
 /* Return the integer value of a yvar. */
 int64_t yvar_get_int(yvar_t *var) {
-	if (var->type != YVAR_INT)
+	if (!var || var->type != YVAR_INT)
 		return (0);
 	return (var->int_value);
 }
 /* Return the floating-point number value of a yvar. */
 double yvar_get_float(yvar_t *var) {
-	if (var->type != YVAR_FLOAT)
+	if (!var || var->type != YVAR_FLOAT)
 		return (0);
 	return (var->float_value);
 }
 /* Return the const string value of a yvar. */
 const char *yvar_get_const_string(yvar_t *var) {
-	if (var->type != YVAR_CONST_STRING)
+	if (!var || var->type != YVAR_CONST_STRING)
 		return (NULL);
 	return (var->const_value);
 }
 /* Return the string value of a yvar. */
 ystr_t yvar_get_string(yvar_t *var) {
-	if (var->type != YVAR_STRING)
+	if (!var || var->type != YVAR_STRING)
 		return (NULL);
 	return (var->string_value);
 }
 /* Return the table value of a yvar. */
 ytable_t *yvar_get_table(yvar_t *var) {
-	if (var->type != YVAR_TABLE)
+	if (!var || var->type != YVAR_TABLE)
 		return (NULL);
 	return (var->table_value);
 }
 /* Return the pointer value of a yvar. */
 void *yvar_get_pointer(yvar_t *var) {
-	if (var->type != YVAR_POINTER)
+	if (!var || var->type != YVAR_POINTER)
 		return (NULL);
 	return (var->pointer_value);
 }

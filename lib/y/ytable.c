@@ -601,7 +601,7 @@ yres_pointer_t ytable_get_key(ytable_t *table, const char *key) {
 		return (YRESULT_ERR(yres_pointer_t, YEINVAL));
 	if (!table->length || !table->buckets)
 		return (YRESULT_ERR(yres_pointer_t, YEUNDEF));
-	// if the key is a numeric string, manage it as a numeric insert
+	// if the key is a numeric string, manage it as a numeric index
 	if (ys_is_numeric(key)) {
 		uint64_t index = (uint64_t)atol(key);
 		return (ytable_get_index(table, index));
@@ -620,8 +620,9 @@ yres_pointer_t ytable_get_key(ytable_t *table, const char *key) {
 		// check if hash values are equal
 		if (_YTABLE_HAS_STRING_KEY(elem->hash_value) &&
 		    _YTABLE_HASH_VALUE(elem->hash_value) == hash_value &&
-		    !strcmp0(elem->key, key))
+		    !strcmp0(elem->key, key)) {
 			return (YRESULT_VAL(yres_pointer_t, elem->data));
+		}
 	}
 	// not found
 	return (YRESULT_ERR(yres_pointer_t, YEUNDEF));
@@ -696,6 +697,12 @@ uint32_t ytable_length(ytable_t *table) {
 	if (!table)
 		return (0);
 	return (table->length);
+}
+/* Tell if a table is empty. */
+bool ytable_empty(ytable_t *table) {
+	if (!table || !table->length)
+		return (true);
+	return (false);
 }
 /* Tell if a ytable is used as an array (continuous list of elememnts). */
 bool ytable_is_array(ytable_t *table) {

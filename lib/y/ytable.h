@@ -265,9 +265,17 @@ void *ytable_extract_key(ytable_t *table, const char *key);
 /**
  * @function	ytable_length
  *		Return the used length of a ytable.
+ * @param	table	Pointer to the ytable.
  * @return	The length of the table.
  */
 uint32_t ytable_length(ytable_t *table);
+/**
+ * @function	ytable_empty
+ * @abstract	Tell if a tale is empty.
+ * @param	table	Pointer to the ytable.
+ * @return	True if the table is empty.
+ */
+bool ytable_empty(ytable_t *table);
 /**
  * @function	ytable_is_array
  *		Tell if a ytable is used as an array (continuous list of elememnts).
@@ -281,7 +289,7 @@ bool ytable_is_array(ytable_t *table);
  * @param	table		Pointer to the ytable.
  * @param	func		Pointer to the callback function.
  * @param	user_data	Pointer to some user data.
- * @return	YENOERR if the callback return YENOERR for all elements.
+ * @return	YENOERR if the callback returned YENOERR for all elements.
  */
 ystatus_t ytable_foreach(ytable_t *table, ytable_function_t func, void *user_data);
 

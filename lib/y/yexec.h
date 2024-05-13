@@ -5,6 +5,7 @@
  */
 #pragma once
 
+#include <string.h>
 #include <unistd.h>
 #include <stdio.h>
 #include <sys/types.h>

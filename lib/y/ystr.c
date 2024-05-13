@@ -129,8 +129,12 @@ ystatus_t ys_resize(ystr_t *s, size_t sz) {
 }
 /* Return true if a ystring is empty or NULL. */
 bool ys_empty(const ystr_t s) {
+	ystr_head_t *y;
 	char *pt = (char*)s;
-	if (!s || !*pt)
+	if (!s)
+		return (true);
+	y = _YSTR_HEAD(s);
+	if (!y->used || !y->total || !*pt)
 		return (true);
 	return (false);
 }
@@ -480,9 +484,9 @@ void ys_lowcase(char *s) {
 	}
 }
 /*
- * Write inside a ystring using formatted arguments. The
- * ystring must be long enough (use ys_setsz() before),
- * otherwise the resulting string will be truncate.
+ * Write a ystring using formatted arguments. The existing ystring
+ * data is freed and the needed memory is allocated. If the first
+ * parameter is set to NULL, a new ystring is created and returned.
  */
 ystr_t ys_printf(ystr_t *s, char *format, ...) {
 	va_list p_list;
@@ -668,6 +672,54 @@ bool ys_is_numeric(const char *s) {
 			return (false);
 	}
 	return (true);
+}
+/* Create a string which can be used as a file name. */
+ystr_t ys_filenamize(char *str) {
+	char *pt;
+	ystr_t res;
+
+	if (!str || !(res = ys_new("")))
+		return (NULL);
+	// replace special characters with dashes
+	bool dash = true;
+	for (pt = str; *pt; ++pt) {
+		if ((*pt >= '0' && *pt <= '9') ||
+		    (*pt >= 'a' && *pt <= 'z') ||
+		    (*pt >= 'A' && *pt <= 'Z') ||
+		    *pt == UNDERSCORE || *pt == DOT) {
+			ys_addc(&res, *pt);
+			dash = false;
+		} else if (*pt == MINUS) {
+			ys_addc(&res, *pt);
+			dash = true;
+		} else if (!dash) {
+			ys_addc(&res, MINUS);
+			dash = true;
+		}
+	}
+	// remove dashes at the end of the string
+	while (!ys_empty(res) && (pt = res) && pt[ys_bytesize(res)] == MINUS)
+		ys_rshift(res);
+	// if the string is empty, add a dash
+	if (ys_empty(res))
+		ys_addc(&res, MINUS);
+	return (res);
+}
+/* Adds quotes before and after a string, and adds backslashes before quotes in the string. */
+ystr_t ys_escape_shell_arg(char *str) {
+	char *pt;
+	ystr_t res;
+
+	if (!str || !(res = ys_new("")))
+		return (NULL);
+	ys_addc(&res, DQUOTE);
+	for (pt = str; *pt; ++pt) {
+		if (*pt == DQUOTE)
+			ys_addc(&res, BACKSLASH);
+		ys_addc(&res, *pt);
+	}
+	ys_addc(&res, DQUOTE);
+	return (res);
 }
 /*
  * Convert a character string in another one where each XML special

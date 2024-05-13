@@ -301,6 +301,20 @@ ystatus_t ys_gets(ystr_t *s, FILE *stream);
  */
 bool ys_is_numeric(const char *s);
 /**
+ * @function	ys_filenamize
+ * @abstract	Create a string which can be used as a file name.
+ * @param	str	The input string.
+ * @return	The generated string.
+ */
+ystr_t ys_filenamize(char *str);
+/**
+ * @function	ys_escape_shell_arg
+ * @abstract	Adds quotes before and after a string, and adds backslashes before quotes in the string.
+ * @param	str	The input string.
+ * @return	The generated string.
+ */
+ystr_t ys_escape_shell_arg(char *str);
+/**
  * @function	str2xmlentity
  *		Convert a character string in another one where each XML special
  *		characters are replaced by their corresponding XML entities.

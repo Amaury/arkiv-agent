@@ -283,7 +283,7 @@ ystatus_t yarray_push_multi(yarray_t *v, size_t n, ...) {
 	va_start(p_list, n);
 	for (; n > 0; --n) {
 		void *e = va_arg(p_list, void*);
-		ystatus_t st = yarray_add(v, e);
+		ystatus_t st = yarray_push(v, e);
 		if (st != YENOERR)
 			return (st);
 	}

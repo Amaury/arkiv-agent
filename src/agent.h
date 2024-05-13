@@ -9,9 +9,11 @@
 #pragma once
 
 #include <stdbool.h>
+#include <time.h>
 #include <syslog.h>
 #include "ystr.h"
 #include "yarray.h"
+#include "ytable.h"
 
 /** @const A_AGENT_VERSION	Version of the agent. */
 #define A_AGENT_VERSION	1.0
@@ -29,7 +31,9 @@
 #define A_ENV_CONF		"conf"
 /** @const A_ENV_LOGFILE	Environment variable for the log file's path. */
 #define A_ENV_LOGFILE		"logfile"
-/** @const A_ENV_SYSLOG		Environment variable for the syslog facility. */
+/** @const A_ENV_STDOUT		Environment variable for STDOUT usage. */
+#define A_ENV_STDOUT		"stdout"
+/** @const A_ENV_SYSLOG		Environment variable for syslog usage. */
 #define A_ENV_SYSLOG		"syslog"
 /** @const A_ENV_DEBUG_MODE	Environment variable for the debug mode. */
 #define A_ENV_DEBUG_MODE	"debug_mode"
@@ -53,8 +57,8 @@
 #define A_PATH_BACKUP_PARAMS	"/opt/arkiv/etc/backup.json"
 /** @const A_PATH_LOGFILE	Path to the log file. */
 #define A_PATH_LOGFILE		"/var/log/arkiv.log"
-/** @const A_PATH_EXE		Path to the executable file. */
-#define A_EXE_FILE		"/opt/arkiv/bin/agent"
+/** @const A_PATH_RCLONE	Path to the rclone executable file. */
+#define A_EXE_RCLONE		"/opt/arkiv/bin/rclone"
 
 /* ********** CRON CONFIGURATION ********** */
 /** @const A_CRON_HOURLY_PATH	Path to the /etc/cron.hourly/arkiv_agent file. */
@@ -96,14 +100,14 @@
 /* ********** API URLS ********** */
 #ifdef DEV_MODE
 	/** @const A_API_URL_PARAMS		API URL used to get server parameters. Parameters: org key, server name. */
-	#define A_API_URL_SERVER_PARAMS		"https://conf-dev.arkiv.sh/%s/%s/params.json"
+	#define A_API_URL_SERVER_PARAMS		"https://conf-dev.arkiv.sh/v1/%s/%s/backup.json"
 	/** @const A_API_URL_SERVER_DECLARE	API URL for server declaration. */
 	#define A_API_URL_SERVER_DECLARE	"http://api.dev.arkiv.sh/v1/server/declare"
 	/** @const A_API_URL_BACKUP_REPORT	API URL for backup reporting. */
 	#define A_API_URL_BACKUP_REPORT		"https://api.dev.arkiv.sh/v1/backup/report"
 #else
 	/** @const A_API_URL_PARAMS		API URL used to get server parameters. Parameters: org key, server name. */
-	#define A_API_URL_SERVER_PARAMS		"https://conf.arkiv.sh/%s/%s/params.json"
+	#define A_API_URL_SERVER_PARAMS		"https://conf.arkiv.sh/v1/%s/%s/backup.json"
 	/** @const A_API_URL_SERVER_DECLARE	API URL for server declaration. */
 	#define A_API_URL_SERVER_DECLARE	"https://api.arkiv.sh/v1/server/declare"
 	/** @const A_API_URL_BACKUP_REPORT	API URL for backup reporting. */
@@ -116,55 +120,160 @@
 /** @const A_MINIMUM_CRYPT_PWD_LENGTH	Minimum size of encryption password. */
 #define A_MINIMUM_CRYPT_PWD_LENGTH	24
 
-/* ********** COMPRESSION ALGORITHMS ********** */
-/** @const A_COMPRESS_NONE	Flat tar'ed file without compression. */
-#define A_COMPRESS_NONE		'n'
-/** @const A_COMPRESS_GZIP	Gzip. */
-#define A_COMPRESS_GZIP		'g'
-/** @const A_COMPRESS_BZIP2	bzip2. */
-#define A_COMPRESS_BZIP2	'b'
-/** @const A_COMPRESS_XZ	xz. */
-#define A_COMPRESS_XZ		'x'
-/** @const A_COMPRESS_ZSTD	zstd. */
-#define A_COMPRESS_ZSTD		's'
+/* ********** PARAMETERS FILE VARPATH ********** */
+/** @const A_PARAM_PATH_ENCRYPTION_STRING	Path to the encryption string parameter. */
+#define A_PARAM_PATH_ENCRYPTION_STRING		"/e"
+/** @const A_PARAM_PATH_COMPRESSION_STRING	Path to the compression string parameter. */
+#define A_PARAM_PATH_COMPRESSION_STRING		"/z"
+/** @const A_PARAM_PATH_SCHEDULES		Path to the schedules parameter. */
+#define A_PARAM_PATH_SCHEDULES			"/sch"
+/** @const A_PARAM_PATH_STORAGES		Path to the storages parameter. */
+#define A_PARAM_PATH_STORAGES			"/st"
+/** @const A_PARAM_PATH_SAVEPACKS		Path to the savepacks parameter. */
+#define A_PARAM_PATH_SAVEPACKS			"/sp"
+/** @const A_PARAM_PATH_NAME			Path to a name element. */
+#define A_PARAM_PATH_NAME			"/n"
+/** @const A_PARAm_PATH_PRE			Path to pre-scripts parameter. */
+#define A_PARAM_PATH_PRE			"/pre"
+/** @const A_PARAM_PATH_POST			Path to post-scripts parameter. */
+#define A_PARAM_PATH_POST			"/post"
+/** @const A_PARAM_PATH_FILE			Path to the list of files. */
+#define A_PARAM_PATH_FILE			"/file"
+/** @const A_PARAM_PATH_DB			Path to the list of databases. */
+#define A_PARAM_PATH_DB				"/db"
+/** @const A_PARAM_KEY_TYPE			Key to a type element. */
+#define A_PARAM_KEY_TYPE			"t"
+/** @const A_PARAM_KEY_ACCESS_KEY		Key to an access key element. */
+#define A_PARAM_KEY_ACCESS_KEY			"ac"
+/** @const A_PARAM_KEY_SECRET_KEY		Key to a secret key element. */
+#define A_PARAM_KEY_SECRET_KEY			"se"
+/** @const A_PARAM_KEY_REGION			Key to a region element. */
+#define A_PARAM_KEY_REGION			"re"
+/** @const A_PARAM_KEY_BUCKET			Key to a bucket element. */
+#define A_PARAM_KEY_BUCKET			"bu"
+/** @const A_PARAM_KEY_PATH			Key to a path element. */
+#define A_PARAM_KEY_PATH			"pa"
 
-/* ********** ENCRYPTION METHODS ********** */
+/* ********** ENCRYPTION METHOD PARAM CHARACTERS ********** */
 /** @const A_CRYPT_OPENSSL	OpenSSL. */
-#define A_CRYPT_OPENSSL		'o'
+#define A_CHAR_CRYPT_OPENSSL	'o'
 /** @const A_CRYPT_SCRYPT	Scrypt. */
-#define A_CRYPT_SCRYPT		's'
+#define A_CHAR_CRYPT_SCRYPT	's'
 /** @const A_CRYPT_GPG		GPG. */
-#define A_CRYPT_GPG		'g'
+#define A_CHAR_CRYPT_GPG	'g'
+
+/* ********** COMPRESSION ALGORITHM PARAM CHARACTERS ********** */
+/** @const A_COMPRESS_NONE	Flat tar'ed file without compression. */
+#define A_CHAR_COMP_NONE	'n'
+/** @const A_COMPRESS_GZIP	Gzip. */
+#define A_CHAR_COMP_GZIP	'g'
+/** @const A_COMPRESS_BZIP2	bzip2. */
+#define A_CHAR_COMP_BZIP2	'b'
+/** @const A_COMPRESS_XZ	xz. */
+#define A_CHAR_COMP_XZ		'x'
+/** @const A_COMPRESS_ZSTD	zstd. */
+#define A_CHAR_COMP_ZSTD	's'
+
+/* ********** STORAGE TYPES ********** */
+/** @const A_STORAGE_TYPE_AWS_S3	Storage type for AWS S3. */
+#define A_STORAGE_TYPE_AWS_S3		"aws_s3"
+/** @const A_STORAGE_TYPE_SFTP		Storage type for SFTP. */
+#define A_STORAGE_TYPE_SFTP		"sftp"
+
+/* ********** WEB PROGAMS ********** */
+/**
+ * @typedef	web_program_t
+ * @abstract	Definition of the usable web program.
+ * @field	A_WEB_CURL	Curl.
+ * @field	A_WEB_WGET	Wget.
+ */
+typedef enum {
+	A_WEB_CURL,
+	A_WEB_WGET
+} web_program_t;
 
 /* ********** ERROR STATUS MANAGEMENT ********** */
 /** @define AERROR_OVERRIDE	Returns the first status that is not YENOERR. */
 #define AERROR_OVERRIDE(a, b)	(((a) != YENOERR) ? (a) : (b))
 
+/* ********** TYPE DEFINITIONS ********** */
+/**
+ * @typedef	encrypt_type_t
+ * @abstract	Defines a type of encryption.
+ * @field	A_CRYPT_UNDEF	Undefined encryption.
+ * @field	A_CRYPT_OPENSSL	OpenSSL.
+ * @field	A_CRYPT_SCRYPT	scrypt.
+ * @field	A_CRYPT_GPG	Gnu Privacy Guard.
+ */
+typedef enum {
+	A_CRYPT_UNDEF = 0,
+	A_CRYPT_OPENSSL,
+	A_CRYPT_SCRYPT,
+	A_CRYPT_GPG
+} encrypt_type_t;
+/**
+ * @typedef	compress_type_t
+ * @abstract	Defines a type of compression.
+ * @field	A_COMP_NONE	No compression.
+ * @field	A_COMP_GZIP	gzip.
+ * @field	A_COMP_BZIP2	bzip2.
+ * @field	A_COMP_XZ	xz.
+ * @field	A_COMP_ZSTD	zstd.
+ */
+typedef enum {
+	A_COMP_NONE = 0,
+	A_COMP_GZIP,
+	A_COMP_BZIP2,
+	A_COMP_XZ,
+	A_COMP_ZSTD
+} compress_type_t;
 /**
  * @typedef	agent_t
  * @abstract	Main structure of the Arkiv agent.
+ * @field	exec_timestamp		Unix timestamp of execution start.
  * @field	agent_path		Realpath to the agent program.
  * @field	conf_path		Path to the configuration file.
  * @field	debug_mode		True if the debug mode was set.
  * @field	log_fd			File descriptor to the log file.
+ * @field	backup_path		Real path to the backup directory.
+ * @field	backup_files_path	Path to the files backup directory.
+ * @field	backup_databases_path	Path to the databases backup directory.
  * @field	conf.logfile		Log file's path.
  * @field	conf.archives_path	Root path to the local archives directory.
  * @field	conf.org_key		Organization key.
  * @field	conf.hostname		Hostname.
  * @field	conf.crypt_pwd		Encryption password.
  * @field	conf.use_syslog		True if syslog is used.
+ * @field	conf.use_stdout		True when log must be written on STDOUT.
+ * @field	bin.tar			Path to the tar program.
+ * @field	bin.z			Path to the compression program.
+ * @field	bin.crypt		Path to the encryption program.
+ * @field	bin.checksum		Path to the sha512sum.
  * @field	param.encryption	Encryption algorithm.
  * @field	param.compression	Compression algorithm.
+ * @field	param.savepack_name	Name of the used savepack.
+ * @field	param.pre_scripts	List of pre-scripts.
+ * @field	param.post_scripts	List of post-scripts.
+ * @field	param.files		List of files to back up.
+ * @field	param.databases		List of databases to back up.
+ * @field	param.storage_name	Name of the used storage.
+ * @field	param.storage		Associative array of storage parameters.
+ * @field	param.storage_env	List of environment variables for the storage setting.
  * @field	log.status		Global execution status.
  * @field	log.backup_files	List of backed up files, with a status.
  * @field	log.backup_databases	List of backup up databases, with a status.
  * @field	log.upload_s3		List of S3 uploads, with a status.
  */
 typedef struct agent_s {
+	time_t exec_timestamp;
 	char *agent_path;
 	ystr_t conf_path;
 	bool debug_mode;
 	FILE *log_fd;
+	ystr_t datetime_chunk_path;
+	ystr_t backup_path;
+	ystr_t backup_files_path;
+	ystr_t backup_databases_path;
 	struct {
 		ystr_t logfile;
 		ystr_t archives_path;
@@ -172,32 +281,42 @@ typedef struct agent_s {
 		ystr_t hostname;
 		ystr_t crypt_pwd;
 		bool use_syslog;
+		bool use_stdout;
 	} conf;
 	struct {
-		enum {
-			CRYPT_GPG,
-			CRYPT_SCRYPT,
-			CRYPT_OPENSSL
-		} encryption;
-		enum {
-			COMP_NONE,
-			COMP_ZSTD,
-			COMP_XZ,
-			COMP_BZIP2,
-			COMP_GZIP
-		} compression;
+		ystr_t tar;
+		ystr_t z;
+		ystr_t crypt;
+		ystr_t checksum;
+	} bin;
+	struct {
+		encrypt_type_t encryption;
+		compress_type_t compression;
+		ystr_t savepack_name;
+		ytable_t *pre_scripts;
+		ytable_t *post_scripts;
+		ytable_t *files;
+		ytable_t *databases;
+		ystr_t storage_name;
+		ytable_t *storage;
+		yarray_t storage_env;
 	} param;
 	struct {
 		enum {
-			STATUS_CREATED = 0,
-			STATUS_SUCCESS,
-			STATUS_FAIL_FILE,
-			STATUS_FAIL_DB,
-			STATUS_FAIL_UPDLOAD
+			A_STATUS_STARTED = 0,
+			A_STATUS_NO_SCHEDULE,
+			A_STATUS_CREATED,
+			A_STATUS_SUCCESS,
+			A_STATUS_FAIL_PRE_SCRIPT,
+			A_STATUS_FAIL_FILE,
+			A_STATUS_FAIL_DATABASE,
+			A_STATUS_FAIL_UPDLOAD,
+			A_STATUS_FAIL_POST_SCRIPT
 		} status;
-		yarray_t backup_files;
-		yarray_t backup_databases;
-		yarray_t upload_s3;
+		ytable_t *pre_scripts;
+		ytable_t *backup_files;
+		ytable_t *backup_databases;
+		ytable_t *post_scripts;
 	} exec_log;
 } agent_t;
 

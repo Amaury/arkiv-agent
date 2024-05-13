@@ -26,10 +26,16 @@ yvar_t *yvar_get_from_path(yvar_t *root, const char *path) {
 			}
 			--pt;
 			if (ys_bytesize(s)) {
-				if (!yvar_is_table(result) ||
-				    ytable_is_array(result->table_value))
+				if (!yvar_is_table(result))
 					goto error;
-				result = ytable_get_key_data(result->table_value, s);
+				if (ytable_is_array(result->table_value)) {
+					if (!ys_is_numeric(s))
+						goto error;
+					uint64_t index = (uint64_t)atol(s);
+					result = ytable_get_index_data(result->table_value, index);
+				} else {
+					result = ytable_get_key_data(result->table_value, s);
+				}
 				if (!result)
 					goto error;
 			}

@@ -1,3 +1,7 @@
+#define __A_API_PRIVATE__
+#include "api.h"
+
+#include "yansi.h"
 #include "yvar.h"
 #include "yfile.h"
 #include "yarray.h"
@@ -6,7 +10,7 @@
 #include "yexec.h"
 #include "configuration.h"
 #include "utils.h"
-#include "api.h"
+#include "log.h"
 #include "agent.h"
 
 /** @define _ARKIV_USER_AGENT	User-agent of the arkiv agent. */
@@ -14,21 +18,12 @@
 /** @define _ARKIV_URL_DECLARE	URL for server declaration. */
 #define	_ARKIV_URL_DECLARE	"api.arkiv.sh/server/declare"
 
-/* Do a web request. */
-static yres_var_t _api_call(const char *url, const char *user, const char *pwd, ytable_t *params, bool asJson);
-/* Do a web request using curl. */
-static yres_bin_t _api_curl(const char *url, const char *user, const char *pwd);
-/* Do a web request using wget. */
-static yres_bin_t _api_wget(const char *url, const char *user, const char *pwd);
- /* Function used to add a GET parameter to an URL. */
-ystatus_t _api_url_add_param(uint64_t hash, char *key, void *data, void *user_data);
-
 /* ********** PUBLIC FUNCTIONS ********** */
 /* Declare the current server to arkiv.sh. */
 ystatus_t api_server_declare(const char *hostname, const char *orgKey) {
 	ystatus_t st = YENOMEM;
 	ystr_t agentVersion = NULL;
-	yvar_t var = {0};
+	yvar_t *var = NULL;
 	// GET parameter
 	ytable_t *params = ytable_create(1, NULL, NULL);
 	if (!params)
@@ -36,92 +31,100 @@ ystatus_t api_server_declare(const char *hostname, const char *orgKey) {
 	ys_printf(&agentVersion, "%f", A_AGENT_VERSION);
 	ytable_set_key(params, "version", agentVersion);
 	// API call
-	yres_var_t res = _api_call(A_API_URL_SERVER_DECLARE, hostname, orgKey, params, true);
+	yres_pointer_t res = api_call(A_API_URL_SERVER_DECLARE, hostname, orgKey, params, true);
 	st = YRES_STATUS(res);
-	var = YRES_VAL(res);
+	var = (yvar_t*)YRES_VAL(res);
 	if (st != YENOERR)
 		goto cleanup;
-	if (!yvar_isset(&var) || !yvar_is_bool(&var) || !yvar_get_bool(&var)) {
+	if (!yvar_isset(var) || !yvar_is_bool(var) || !yvar_get_bool(var)) {
 		st = YEUNDEF;
 		goto cleanup;
 	}
 cleanup:
 	ys_free(agentVersion);
 	ytable_free(params);
-	yvar_delete(&var);
+	yvar_delete(var);
 	return (st);
+}
+/* Fetch a host's parameters file. */
+yvar_t *api_get_params_file(agent_t *agent) {
+	// forge URL
+	ystr_t url = ys_printf(NULL, A_API_URL_SERVER_PARAMS, agent->conf.org_key, agent->conf.hostname);
+	ADEBUG("│ ├ " YANSI_FAINT "Download file: " YANSI_RESET "%s", url);
+	// fetch file
+	yres_pointer_t res = api_call(url, NULL, NULL, NULL, true);
+	ys_free(url);
+	ystatus_t st = YRES_STATUS(res);
+	yvar_t *var = (yvar_t*)YRES_VAL(res);
+	if (st != YENOERR) {
+		ADEBUG("│ └ " YANSI_RED "Download error" YANSI_RESET);
+		return (NULL);
+	}
+	ADEBUG("│ ├ " YANSI_FAINT "File downloaded" YANSI_RESET);
+	if (!yvar_is_table(var)) {
+		ADEBUG("│ └ " YANSI_RED "Bad file format" YANSI_RESET);
+		yvar_release(var);
+		return (NULL);
+	}
+	ADEBUG("│ └ " YANSI_FAINT "File deserialized" YANSI_RESET);
+	return (var);
 }
 
 /* ********** STATIC FUNCTIONS ********** */
-/**
- * @typedef	_api_get_param_t
- * @abstract	Structure used for GET parameters construction.
- * @field	offset	Offset of the parameter.
- * @field	url	Constructed URL.
- */
-typedef struct {
-	uint16_t offset;
-	ystr_t   *url;
-} _api_get_param_t;
-/**
- * @function	_api_call
- * @abstract	Do a web request using wget or curl.
- * @param	url	URL with no protocol (the 'https://' protocol will be added).
- * @param	user	Username (or NULL if no authentication is required).
- * @param	pwd	Password (or NULL if no authentication is required).
- * @param	params	GET parameters (or NULL if no parameters).
- * @param	asJson	True to process the response as a JSON stream.
- * @return	The result of the request. If the request is successful, the status is YENOERR.
- *		The value is a string or the result of the JSON deserialization.
- */
-static yres_var_t _api_call(const char *url, const char *user, const char *pwd, ytable_t *params, bool asJson) {
+/* Do a web request. */
+static yres_pointer_t api_call(const char *url, const char *user, const char *pwd, ytable_t *params, bool asJson) {
 	ystr_t fullUrl = ys_new(url);
 	yres_bin_t res = {0};
 	ybin_t responseBin = {0};
 	ystr_t responseStr = NULL;
-	yvar_t responseVar = {0};
+	yvar_t *responseVar = NULL;
 	yjson_parser_t *jsonParser = NULL;
-	yres_var_t result = {0};
+	yres_pointer_t result = {0};
 
 	// add GET parameters to the URL string
 	if (ytable_length(params)) {
-		_api_get_param_t foreachParam = {
+		api_get_param_t foreachParam = {
 			.offset = 0,
 			.url = &fullUrl,
 		};
-		ytable_foreach(params, _api_url_add_param, (void*)&foreachParam);
+		ytable_foreach(params, api_url_add_param, (void*)&foreachParam);
 	}
 	// call the external program
 	if (check_program_exists("curl"))
-		res = _api_curl(url, user, pwd);
+		res = api_curl(url, user, pwd);
 	else if (check_program_exists("wget"))
-		res = _api_wget(url, user, pwd);
+		res = api_wget(url, user, pwd);
 	else {
-		result = YRESULT_ERR(yres_var_t, YENOEXEC);
+		result = YRESULT_ERR(yres_pointer_t, YENOEXEC);
 		goto cleanup;
 	}
 	responseBin = YRES_VAL(res);
 	// manage error
 	if (YRES_STATUS(res) != YENOERR) {
-		result = YRESULT_ERR(yres_var_t, YRES_STATUS(res));
+		result = YRESULT_ERR(yres_pointer_t, YRES_STATUS(res));
 		goto cleanup;
 	}
 	// process the response
 	if (!asJson) {
 		// returns a ystring
 		if (!(responseStr = ys_copy(responseBin.data))) {
-			result = YRESULT_ERR(yres_var_t, YENOMEM);
+			result = YRESULT_ERR(yres_pointer_t, YENOMEM);
 			goto cleanup;
 		}
-		yvar_init_string(&responseVar, responseStr);
-		result = YRESULT_VAL(yres_var_t, responseVar);
+		responseVar = yvar_new_string(responseStr);
+		result = YRESULT_VAL(yres_pointer_t, responseVar);
 	} else {
 		// returns the deserialized JSON stream
 		if (!(jsonParser = yjson_new())) {
-			result = YRESULT_ERR(yres_var_t, YENOMEM);
+			result = YRESULT_ERR(yres_pointer_t, YENOMEM);
 			goto cleanup;
 		}
-		result = yjson_parse(jsonParser, (char*)responseBin.data);
+		responseVar = yjson_parse_simple(jsonParser, (char*)responseBin.data);
+		if (responseVar) {
+			result = YRESULT_VAL(yres_pointer_t, responseVar);
+		} else {
+			result = YRESULT_ERR(yres_pointer_t, YEUNDEF);
+		}
 	}
 cleanup:
 	ys_free(fullUrl);
@@ -129,15 +132,8 @@ cleanup:
 	yjson_free(jsonParser);
 	return (result);
 }
-/**
- * @function	_api_curl
- * @abstract	Do a web request using curl.
- * @param	url	URL with no protocol (the 'https://' protocol will be added) but with the GET parameters.
- * @param	user	Username (or NULL if no authentication is required).
- * @param	pwd	Password (or NULL if no authentication is required).
- * @return	The result of the request. If the request is successful, the status is YENOERR.
- */
-static yres_bin_t _api_curl(const char *url, const char *user, const char *pwd) {
+/* Do a web request using curl. */
+static yres_bin_t api_curl(const char *url, const char *user, const char *pwd) {
 	yres_bin_t result = {0};
 	ystr_t curlPath = NULL;
 	ystr_t fileContent = NULL;
@@ -190,17 +186,9 @@ cleanup:
 	ys_free(fileContent);
 	yarray_free(args);
 	return (result);
-
 }
-/**
- * @function	_api_wget
- * @abstract	Do a web request using wget.
- * @param	url	URL with no protocol (the 'https://' protocol will be added) but with the GET parameters.
- * @param	user	Username (or NULL if no authentication is required).
- * @param	pwd	Password (or NULL if no authentication is required).
- * @return	The result of the request. If the request is successful, the status is YENOERR.
- */
-static yres_bin_t _api_wget(const char *url, const char *user, const char *pwd) {
+/* Do a web request using wget. */
+static yres_bin_t api_wget(const char *url, const char *user, const char *pwd) {
 	yres_bin_t result = {0};
 	ystr_t wgetPath = NULL;
 	ystr_t fullUrl = NULL;
@@ -263,15 +251,11 @@ cleanup:
 	yarray_free(args);
 	return (result);
 }
-/**
- * @function	_api_url_add_param
- *		Function used to add a GET parameter to an URL.
- * @param	
- */
-ystatus_t _api_url_add_param(uint64_t hash, char *key, void *data, void *user_data) {
+ /* Function used to add a GET parameter to an URL. */
+static ystatus_t api_url_add_param(uint64_t hash, char *key, void *data, void *user_data) {
 	if (!key || !data)
 		return (YEINVAL);
-	_api_get_param_t *param = user_data;
+	api_get_param_t *param = user_data;
 	ystatus_t status = ys_append(param->url, (param->offset ? "&" : "?"));
 	if (status != YENOERR)
 		return (status);

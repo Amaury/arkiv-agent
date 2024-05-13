@@ -85,7 +85,7 @@ void exec_configuration(agent_t *agent) {
 
 /* ********** PRIVATE FUNCTIONS ********** */
 /* Asks for the organization key. */
-ystr_t config_ask_orgkey(void) {
+static ystr_t config_ask_orgkey(void) {
 	ystr_t ys = NULL;
 
 	for (; ; ) {
@@ -100,7 +100,7 @@ ystr_t config_ask_orgkey(void) {
 	}
 }
 /* Asks for the hostname. */
-ystr_t config_ask_hostname(void) {
+static ystr_t config_ask_hostname(void) {
 	ystr_t hostname = NULL;
 	ystr_t ys = NULL;
 
@@ -130,7 +130,7 @@ ystr_t config_ask_hostname(void) {
 	return (hostname);
 }
 /* Asks for the local archives path. */
-ystr_t config_ask_archives_path(agent_t *agent) {
+static ystr_t config_ask_archives_path(agent_t *agent) {
 	ystr_t ys = NULL;
 
 	printf("Path to the local archives directory? [" YANSI_YELLOW "%s" YANSI_RESET "]\n" YANSI_BLUE, agent->conf.archives_path);
@@ -143,7 +143,7 @@ ystr_t config_ask_archives_path(agent_t *agent) {
 	return (ys_copy(A_PATH_ARCHIVES));
 }
 /* Asks for the log file. */
-ystr_t config_ask_log_file(agent_t *agent) {
+static ystr_t config_ask_log_file(agent_t *agent) {
 	ystr_t ys = NULL;
 
 	printf("Path to the log file? [" YANSI_YELLOW "%s" YANSI_RESET "]\n" YANSI_BLUE, agent->conf.logfile);
@@ -156,7 +156,7 @@ ystr_t config_ask_log_file(agent_t *agent) {
 	return (ys_copy(A_PATH_LOGFILE));
 }
 /* Asks for syslog. */
-bool config_ask_syslog(void) {
+static bool config_ask_syslog(void) {
 	ystr_t ys = NULL;
 	bool result = false;
 
@@ -178,7 +178,7 @@ bool config_ask_syslog(void) {
 	}
 }
 /* Asks for the encryption password. */
-ystr_t config_ask_encryption_password(void) {
+static ystr_t config_ask_encryption_password(void) {
 	ystr_t ys = NULL;
 
 	for (; ; ) {
@@ -197,8 +197,8 @@ ystr_t config_ask_encryption_password(void) {
 	}
 }
 /* Writes the JSON configuration file. */
-void config_write_json_file(const char *org_key, const char *hostname, const char *archives_path,
-                            const char *logfile, bool syslog, const char *crypt_pwd) {
+static void config_write_json_file(const char *org_key, const char *hostname, const char *archives_path,
+                                   const char *logfile, bool syslog, const char *crypt_pwd) {
 	yvar_t *config = yvar_new_table(NULL);
 	ytable_t *table = yvar_get_table(config);
 	ytable_set_key(table, A_JSON_ORG_KEY, yvar_new_const_string(org_key));
@@ -218,7 +218,7 @@ void config_write_json_file(const char *org_key, const char *hostname, const cha
 	ytable_free(table);
 }
 /* Add the agent execution to the crontab. */
-void config_add_to_crontab(agent_t *agent, config_crontab_t cron_type) {
+static void config_add_to_crontab(agent_t *agent, config_crontab_t cron_type) {
 	ystr_t ys = NULL;
 
 	// search for /etc/cron.hourly directory

@@ -54,6 +54,15 @@ void yjson_free(yjson_parser_t *json);
 yres_var_t yjson_parse(yjson_parser_t *json, char *input);
 
 /**
+ * @function	yjson_parse_simple
+ * @abstract	Starts a JSON parser, returning directly the corresponding yvar or
+ *		a NULL pointer if any error occurred.
+ * @param	json	Pointer to the JSON parser object.
+ * @param	input	Pointer to the string to parse.
+ * @return	The root node value.
+ */
+yvar_t *yjson_parse_simple(yjson_parser_t *json, char *input);
+/**
  * @function	yjson_print
  *		Prints a JSON value node and its subnodes.
  * @param	value	Pointer to the value node.

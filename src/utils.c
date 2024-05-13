@@ -180,7 +180,7 @@ config_crontab_t check_cron(void) {
 	printf("It should be available under the directories " YANSI_YELLOW "/etc/cron.hourly" YANSI_RESET
 	       " or " YANSI_YELLOW "/etc/cron.d" YANSI_RESET ",\nor the file " YANSI_YELLOW "/etc/crontab" YANSI_RESET
 	       ".\n\n");
-	printf(YANSI_BOLD "Maybe you forgot to execute the agent program as root?\n\n" YANSI_RESET);
+	printf(YANSI_BOLD "Maybe you forgot to execute the agent program as super-user?\n\n" YANSI_RESET);
 	printf(YANSI_RED "Abort.\n" YANSI_RESET);
 	exit(2);
 }

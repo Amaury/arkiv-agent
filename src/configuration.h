@@ -39,39 +39,39 @@ void exec_configuration(agent_t *agent);
 	 * @abstract	Asks for the organization key.
 	 * @return	The key. Must be freed.
 	 */
-	ystr_t config_ask_orgkey(void);
+	static ystr_t config_ask_orgkey(void);
 	/**
 	 * @function	config_ask_hostname
 	 * @abstract	Asks for the hostname.
 	 * @return	The hostname.
 	 */
-	ystr_t config_ask_hostname(void);
+	static ystr_t config_ask_hostname(void);
 	/**
 	 * @function	config_ask_archives_path
 	 * @abstract	Asks for the local archives path.
 	 * @param	agent	Pointer to the agent structure.
 	 * @return	The archives path.
 	 */
-	ystr_t config_ask_archives_path(agent_t *agent);
+	static ystr_t config_ask_archives_path(agent_t *agent);
 	/**
 	 * @function	config_ask_log_file
 	 * @bastract	Asks for the log file.
 	 * @param	agent	Pointer to the agent structure.
 	 * @return	The log file's path.
 	 */
-	ystr_t config_ask_log_file(agent_t *agent);
+	static ystr_t config_ask_log_file(agent_t *agent);
 	/**
 	 * @function	config_ask_syslog
 	 * @abstract	Asks for syslog.
 	 * @return	True if syslog is used.
 	 */
-	bool config_ask_syslog(void);
+	static bool config_ask_syslog(void);
 	/**
 	 * @function	config_ask_encryption_password
 	 * @abstract	Asks for the encryption password.
 	 * @return	The encryption password.
 	 */
-	ystr_t config_ask_encryption_password(void);
+	static ystr_t config_ask_encryption_password(void);
 	/**
 	 * @function	config_write_json_file
 	 * @abstract	Writes the JSON configuration file.
@@ -82,8 +82,8 @@ void exec_configuration(agent_t *agent);
 	 * @param	syslog		True if syslog is used.
 	 * @param	crypt_pwd	Encryption password.
 	 */
-	void config_write_json_file(const char *orgKey, const char *hostname, const char *archives_path,
-	                            const char *logfile, bool syslog, const char *cryptPwd);
+	static void config_write_json_file(const char *orgKey, const char *hostname, const char *archives_path,
+	                                   const char *logfile, bool syslog, const char *cryptPwd);
 	/**
 	 * @function	config_add_to_crontab
 	 * @abstract	Check if the agent execution is already in crontab. If not, add it.
@@ -91,6 +91,6 @@ void exec_configuration(agent_t *agent);
 	 * @param	cron_type	Type of available crontab.
 	 * @return	YENOERR if the agent execution was in crontab or has been added successfully.
 	 */
-	void config_add_to_crontab(agent_t *agent, config_crontab_t cron_type);
+	static void config_add_to_crontab(agent_t *agent, config_crontab_t cron_type);
 #endif // __A_CONFIGURATION_PRIVATE__
 

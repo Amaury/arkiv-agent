@@ -60,6 +60,7 @@ int main(int argc, char *argv[]) {
 		if (agent->debug_mode) {
 			printf("agent_path           : '%s'\n", agent->agent_path);
 			printf("conf_path            : '%s'\n", agent->conf_path);
+			printf("execution timestamp  : '%.f'\n", difftime(agent->exec_timestamp, (time_t)0));
 			printf("debug_mode           : '%s'\n", agent->debug_mode ? "true" : "false");
 			printf("conf.logfile         : '%s'\n", agent->conf.logfile);
 			printf("conf.archives_path   : '%s'\n", agent->conf.archives_path);
@@ -233,29 +234,38 @@ void _agent_usage(const char *progname) {
 	);
 	printf(
 		YANSI_BG_GRAY YANSI_WHITE " Environment variables " YANSI_RESET "\n\n"
-		YANSI_FAINT "  conf=/path/to/conf.ini\n" YANSI_RESET
 		YANSI_RED "  Path to the configuration file\n" YANSI_RESET
-		"  Default value: /opt/arkiv/etc/agent.ini\n\n"
-		YANSI_FAINT "  logfile=/path/to/file.log\n" YANSI_RESET
+		YANSI_BOLD "  conf" YANSI_RESET "=/path/to/conf.ini\n"
+		YANSI_FAINT "  Default value: " YANSI_RESET YANSI_BLUE "/opt/arkiv/etc/agent.ini\n\n" YANSI_RESET
+
 		YANSI_RED "  Path to the log file\n" YANSI_RESET
-		"  Default value: /var/log/arkiv-agent.log\n\n"
-		YANSI_FAINT "  syslog=USER|LOCAL0|LOCAL1|LOCAL2|LOCAL3|LOCAL4|LOCAL5|LOCAL6|LOCAL7\n" YANSI_RESET
+		YANSI_BOLD "  logfile" YANSI_RESET "=/path/to/file.log\n"
+		YANSI_FAINT "  Use the value " YANSI_RESET YANSI_YELLOW "/dev/null" YANSI_RESET YANSI_FAINT " to disable file-based logging.\n"
+		"  Default value: " YANSI_RESET YANSI_BLUE "/var/log/arkiv-agent.log\n\n" YANSI_RESET
+
 		YANSI_RED "  Enabling log on syslog\n" YANSI_RESET
-		"  Sets the log to syslog, in addition to other logging mechanisms. The given\n"
-		"  parameter value is used as the output facility (see "
-		YANSI_LINK_STATIC("https://en.wikipedia.org/wiki/Syslog#Facility", "Wikipedia") ").\n\n"
-		YANSI_FAINT "  debug_mode=true|yes|on|1\n" YANSI_RESET
+		YANSI_BOLD "  syslog" YANSI_RESET "=true\n"
+		YANSI_FAINT "  Sets the log to syslog, in addition to other logging mechanisms.\n"
+		"  Default value: " YANSI_RESET YANSI_BLUE "false\n\n" YANSI_RESET
+
 		YANSI_RED "  Activation of the debug mode\n" YANSI_RESET
-		"  Set log level to 'DEBUG' and display message on stderr.\n"
-		"  Any value other than 'true', 'yes', 'on', '1' would be "
-		"interpreted as false.\n"
-		"  Default value: false\n\n"
-		YANSI_FAINT "  archives_path=/path/to/dir\n" YANSI_RESET
-		YANSI_RED "  Path to the directory where local archives will be created\n" YANSI_RESET
-		"  Default value: /var/archives\n\n"
-		YANSI_FAINT "  crypt_pwd=...45 characters-long password...\n" YANSI_RESET
+		YANSI_BOLD "  debug_mode" YANSI_RESET "=true\n"
+		YANSI_FAINT "  Set log level to 'DEBUG' (the program writes more log messages).\n"
+		"  Default value: " YANSI_RESET YANSI_BLUE "false\n\n" YANSI_RESET
+
+		YANSI_RED "  Log on STDOUT\n" YANSI_RESET
+		YANSI_BOLD "  stdout" YANSI_RESET "=true\n"
+		YANSI_FAINT "  Activate log on the standard output of the program.\n"
+		"  Default value: " YANSI_RESET YANSI_BLUE "false\n\n" YANSI_RESET
+
+		YANSI_RED "  Path to the archives directory\n" YANSI_RESET
+		YANSI_BOLD "  archives_path" YANSI_RESET "=/path/to/dir\n"
+		YANSI_FAINT "  Path to the directory where local archives will be created\n"
+		"  Default value: " YANSI_RESET YANSI_BLUE "/var/archives\n\n" YANSI_RESET
+
 		YANSI_RED "  Encryption password\n" YANSI_RESET
-		"  Used to override the encryption password defined in the configuration file.\n\n"
+		YANSI_BOLD "  crypt_pwd" YANSI_RESET "=...(40 characters-long password)...\n"
+		YANSI_FAINT "  Used to override the encryption password defined in the configuration file.\n\n" YANSI_RESET
 	);
 	printf(
 		YANSI_BG_GRAY YANSI_WHITE " Examples " YANSI_RESET "\n\n"
@@ -278,7 +288,7 @@ void _agent_usage(const char *progname) {
 		YANSI_GREEN "/opt/arkiv/bin/agent " YANSI_RESET
 		YANSI_YELLOW "backup\n\n" YANSI_RESET
 		"  Write log on syslog:\n"
-		YANSI_FAINT "  syslog=USER " YANSI_RESET
+		YANSI_FAINT "  syslog=true " YANSI_RESET
 		YANSI_GREEN "/opt/arkiv/bin/agent " YANSI_RESET
 		YANSI_YELLOW "backup\n\n" YANSI_RESET
 	);

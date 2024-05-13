@@ -152,8 +152,6 @@ typedef struct {
 	yvar_t value;
 } yres_var_t;
 
-//#include "y.h"
-
 /**
  * @function	yvar_new_undef
  *		Create a new undefined yvar.
@@ -355,6 +353,14 @@ yvar_t *yvar_release(yvar_t *var);
  * @return	A pointer to the newly allocated yvar.
  */
 yvar_t *yvar_clone(yvar_t *var);
+/**
+ * @function	yvar_clone_copy
+ * @abstract	Create a copy of a given yvar. Its content is copied, not duplicated.
+ *		This function is useful to create an instanciated yvar from a static one.
+ * @param	var	A pointer to the yvar.
+ * @return	A pointer to the newly allocated yvar.
+ */
+yvar_t *yvar_clone_copy(yvar_t *var);
 
 /* ********** DELETION ********** */
 /**

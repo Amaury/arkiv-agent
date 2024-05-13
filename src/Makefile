@@ -19,6 +19,7 @@ SRC	=	main.c		\
 		configuration.c	\
 		declare.c	\
 		backup.c	\
+		upload.c	\
 		utils.c		\
 		api.c
 
