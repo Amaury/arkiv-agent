@@ -177,11 +177,10 @@ static ystatus_t upload_item_aws_s3(uint64_t hash, char *key, void *data, void *
 	item->upload_status = YENOERR;
 cleanup:
 	ys_free(dest_path);
-	ys_free(bucket);
 	return (status);
 }
 /* Generates the list of environment variables for AWS S3 upload. */
-yarray_t upload_create_env_aws_s3(agent_t *agent) {
+static yarray_t upload_create_env_aws_s3(agent_t *agent) {
 	yarray_t env = NULL;
 	char *type = NULL, *provider = NULL, *acl = NULL, *access_key = NULL, *secret_key = NULL, *region = NULL;
 	ystr_t ys = NULL;

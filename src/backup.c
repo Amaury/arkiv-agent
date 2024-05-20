@@ -62,19 +62,24 @@ void exec_backup(agent_t *agent) {
 		return;
 	}
 	// execute pre-scripts
-	if (backup_exec_scripts(agent, A_SCRIPT_TYPE_PRE) != YENOERR) {
-		return;
+	if (backup_exec_scripts(agent, A_SCRIPT_TYPE_PRE) == YENOERR) {
+		// backup files
+		backup_files(agent);
+		// backup databases
+		//backup_databases(agent);
+		// encrypt files
+		backup_encrypt_files(agent);
+		// compute checksums
+		backup_compute_checksums(agent);
+		// upload files
+		upload_files(agent);
 	}
-	// backup files
-	backup_files(agent);
-	// backup databases
-	//backup_databases(agent);
-	// encrypt files
-	backup_encrypt_files(agent);
-	// compute checksums
-	backup_compute_checksums(agent);
-	// upload files
-	upload_files(agent);
+	// send report
+	ALOG("Send report to arkiv.sh");
+	if (api_backup_report(agent) == YENOERR)
+		ALOG("└ " YANSI_GREEN "Done" YANSI_RESET);
+	else
+		ALOG("└ " YANSI_RED "Failed" YANSI_RESET);
 	// execute post-scripts
 	if (backup_exec_scripts(agent, A_SCRIPT_TYPE_POST) != YENOERR) {
 		return;
@@ -162,6 +167,13 @@ static ystatus_t backup_fetch_params(agent_t *agent) {
 		}
 	}
 
+	// get schedule name
+	var_ptr = yvar_get_from_path(params, A_PARAM_PATH_SCHEDULE_NAME);
+	if (!var_ptr || !yvar_is_string(var_ptr) || !(agent->param.schedule_name = yvar_get_string(var_ptr))) {
+		ALOG("└ " YANSI_RED "Unable to find schedule name" YANSI_RESET);
+		return (YEBADCONF);
+	}
+	ADEBUG("├ " YANSI_FAINT "Schedule name: " YANSI_RESET "%s", agent->param.schedule_name);
 	// extract schedules
 	var_ptr = yvar_get_from_path(params, A_PARAM_PATH_SCHEDULES);
 	ytable_t *schedules = yvar_get_table(var_ptr);
@@ -189,9 +201,27 @@ static ystatus_t backup_fetch_params(agent_t *agent) {
 		return (YEAGAIN);
 	}
 	ADEBUG("│ └ " YANSI_FAINT "Schedule found" YANSI_RESET);
+	// from the schedule, get the retention
+	ADEBUG("├ " YANSI_FAINT "From the schedule, extract the retention type" YANSI_RESET);
+	yvar_t *var_ptr2 = yvar_get_from_path(schedule, A_PARAM_PATH_RETENTION_TYPE);
+	yvar_t *var_ptr3 = yvar_get_from_path(schedule, A_PARAM_PATH_RETENTION_DURATION);
+	ystr_t ret_type;
+	uint64_t ret_duration;
+	if (var_ptr2 && yvar_is_string(var_ptr2) && (ret_type = yvar_get_string(var_ptr2)) &&
+	    !ys_empty(ret_type) &&
+	    var_ptr3 && yvar_is_int(var_ptr3) && (ret_duration = yvar_get_int(var_ptr3)) &&
+	    ret_duration) {
+		agent->param.retention_type = (ret_type[0] == 'd') ? A_RETENTION_DAYS :
+		                              (ret_type[0] == 'w') ? A_RETENTION_WEEKS :
+		                              (ret_type[0] == 'm') ? A_RETENTION_MONTHS :
+		                              (ret_type[0] == 'y') ? A_RETENTION_YEARS :
+		                              A_RETENTION_INFINITE;
+		if (agent->param.retention_type != A_RETENTION_INFINITE)
+			agent->param.retention_duration = ret_duration;
+	}
 	// from the schedule, get the savepack ID
-	ADEBUG("├ " YANSI_FAINT "From the schedule, extract the savepack ID" YANSI_RESET, varpath);
-	yvar_t *var_ptr2 = yvar_get_from_path(schedule, A_PARAM_PATH_SAVEPACKS);
+	ADEBUG("├ " YANSI_FAINT "From the schedule, extract the savepack ID" YANSI_RESET);
+	var_ptr2 = yvar_get_from_path(schedule, A_PARAM_PATH_SAVEPACKS);
 	if (!var_ptr2 || !yvar_is_int(var_ptr2)) {
 		ALOG("└ " YANSI_RED "Failed (wrongly formatted file: no schedule savepack)" YANSI_RESET);
 		return (YEBADCONF);
@@ -199,7 +229,7 @@ static ystatus_t backup_fetch_params(agent_t *agent) {
 	int64_t savepack_id = yvar_get_int(var_ptr2);
 	ADEBUG("│ └ " YANSI_FAINT "Savepack ID: " YANSI_RESET "%" PRId64, savepack_id);
 	// from the schedule, get the storage ID
-	ADEBUG("├ " YANSI_FAINT "From the schedule, extract the storage ID" YANSI_RESET, varpath);
+	ADEBUG("├ " YANSI_FAINT "From the schedule, extract the storage ID" YANSI_RESET);
 	var_ptr2 = yvar_get_from_path(schedule, A_PARAM_PATH_STORAGES);
 	if (!var_ptr2 || !yvar_is_int(var_ptr2)) {
 		ALOG("└ " YANSI_RED "Failed (wrongly formatted file: no schedule storage)" YANSI_RESET);
@@ -209,7 +239,7 @@ static ystatus_t backup_fetch_params(agent_t *agent) {
 	ADEBUG("│ └ " YANSI_FAINT "Storage ID: " YANSI_RESET "%" PRId64, storage_id);
 
 	// search the savepack
-	ADEBUG("├ " YANSI_FAINT "Search for the savepack from its ID" YANSI_RESET, varpath);
+	ADEBUG("├ " YANSI_FAINT "Search for the savepack from its ID" YANSI_RESET);
 	varpath = ys_printf(NULL, "%s/%" PRId64, A_PARAM_PATH_SAVEPACKS, savepack_id);
 	if (!varpath) {
 		ALOG("└ " YANSI_RED "Memory allocation error" YANSI_RESET);
@@ -308,12 +338,16 @@ static ystatus_t backup_create_output_directory(agent_t *agent) {
 static ystatus_t backup_exec_scripts(agent_t *agent, script_type_t type) {
 	ystatus_t st;
 	ytable_t *scripts;
+	ytable_function_t callback;
 
 	// use the pre- or post-list
-	if (type == A_SCRIPT_TYPE_PRE)
+	if (type == A_SCRIPT_TYPE_PRE) {
 		scripts = agent->param.pre_scripts;
-	else
+		callback = backup_exec_pre_script;
+	} else {
 		scripts = agent->param.post_scripts;
+		callback = backup_exec_post_script;
+	}
 	// check if there are some scripts to execute
 	if (!scripts || !ytable_length(scripts))
 		return (YENOERR);
@@ -323,15 +357,15 @@ static ystatus_t backup_exec_scripts(agent_t *agent, script_type_t type) {
 	else
 		ALOG("Execute post-scripts");
 	// process all scripts
-	st = ytable_foreach(scripts, backup_exec_script, agent);
+	st = ytable_foreach(scripts, callback, agent);
 	if (st == YENOERR)
-		ALOG("└ " YANSI_GREEN "Done" YANSI_RESET "\n");
+		ALOG("└ " YANSI_GREEN "Done" YANSI_RESET);
 	else
-		ALOG("└ " YANSI_RED "Failed" YANSI_RESET "\n");
+		ALOG("└ " YANSI_RED "Failed" YANSI_RESET);
 	return (st);
 }
-/* Execute a script. */
-static ystatus_t backup_exec_script(uint64_t hash, char *key, void *data, void *user_data) {
+/* Execute a pre-script. */
+static ystatus_t backup_exec_pre_script(uint64_t hash, char *key, void *data, void *user_data) {
 	yvar_t *var_script = (yvar_t*)data;
 	agent_t *agent = user_data;
 	ystr_t command;
@@ -342,9 +376,37 @@ static ystatus_t backup_exec_script(uint64_t hash, char *key, void *data, void *
 		ALOG("└ " YANSI_RED "Failed (bad parameter)" YANSI_RESET "\n");
 		return (YEBADCONF);
 	}
-	ALOG("├ " YANSI_FAINT "Execution of '" YANSI_RESET "%s" YANSI_FAINT "'" YANSI_RESET, command);
+	ALOG("├ " YANSI_FAINT "Execution of " YANSI_RESET "%s", command);
 	// creation of the log entry
 	if (!(log = log_create_pre_script(agent, command))) {
+		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
+		return (YENOMEM);
+	}
+	// script execution
+	int ret_val = system(command);
+	if (ret_val == -1 || !WIFEXITED(ret_val) || WEXITSTATUS(ret_val)) {
+		ADEBUG("│ └ " YANSI_RED "Failed (returned value " YANSI_RESET "%d" YANSI_RED ")" YANSI_RESET, WEXITSTATUS(ret_val));
+		log->success = false;
+		return (YEFAULT);
+	}
+	ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
+	return (YENOERR);
+}
+/* Execute a post-script. */
+static ystatus_t backup_exec_post_script(uint64_t hash, char *key, void *data, void *user_data) {
+	yvar_t *var_script = (yvar_t*)data;
+	agent_t *agent = user_data;
+	ystr_t command;
+	log_script_t *log;
+
+	// checks
+	if (!yvar_is_string(var_script) || !(command = yvar_get_string(var_script))) {
+		ALOG("└ " YANSI_RED "Failed (bad parameter)" YANSI_RESET "\n");
+		return (YEBADCONF);
+	}
+	ALOG("├ " YANSI_FAINT "Execution of " YANSI_RESET "%s", command);
+	// creation of the log entry
+	if (!(log = log_create_post_script(agent, command))) {
 		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
 		return (YENOMEM);
 	}
@@ -419,7 +481,7 @@ static ystatus_t backup_file(uint64_t hash, char *key, void *data, void *user_da
 	    !(args = yarray_create(9))) {
 		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
 		status = YENOMEM;
-		log->tar_status = status;
+		log->dump_status = status;
 		log->success = false;
 		goto cleanup;
 	}
@@ -441,12 +503,12 @@ static ystatus_t backup_file(uint64_t hash, char *key, void *data, void *user_da
 	status = yexec(agent->bin.tar, args, NULL, NULL, "/tmp/tar_result_arkiv");
 	if (status != YENOERR) {
 		ALOG("│ └ " YANSI_RED "Tar error" YANSI_RESET);
-		log->tar_status = status;
+		log->dump_status = status;
 		log->success = false;
 		goto cleanup;
 	}
 	// set log status
-	log->tar_status = YENOERR;
+	log->dump_status = YENOERR;
 	// check if a compression is needed
 	if (agent->param.compression == A_COMP_NONE) {
 		ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);

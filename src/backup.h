@@ -62,7 +62,19 @@ void exec_backup(agent_t *agent);
 	 *		YEBADCONF if the configuration is not valid,
 	 *		YEFAULT if the script exited with an error (returned value != 0).
 	 */
-	static ystatus_t backup_exec_script(uint64_t hash, char *key, void *data, void *user_data);
+	static ystatus_t backup_exec_pre_script(uint64_t hash, char *key, void *data, void *user_data);
+	/**
+	 * @function	backup_exec_post_script
+	 * @abstract	Execute a post-script.
+	 * @param	hash		Index in the list of scripts.
+	 * @param	key		Always null.
+	 * @param	data		Path to the script to execute.
+	 * @param	user_data	Pointer to the agent structure.
+	 * @return	YENOERR if the script exited withhout error (returned value == 0),
+	 *		YEBADCONF if the configuration is not valid,
+	 *		YEFAULT if the script exited with an error (returned value != 0).
+	 */
+	static ystatus_t backup_exec_post_script(uint64_t hash, char *key, void *data, void *user_data);
 	/**
 	 * @function	backup_files
 	 * @abstract	Backup all listed files. They are tar'ed and compressed.

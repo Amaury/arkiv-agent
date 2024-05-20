@@ -449,19 +449,19 @@ ystatus_t yvar_cast_to_string(yvar_t *var);
  * @param	var	A pointer to the yvar.
  * @return	The result.
  */
-bool yvar_get_bool(yvar_t *var);
+bool yvar_get_bool(const yvar_t *var);
 /** @function yvar_get_int	Return the integer value of a yvar. */
-int64_t yvar_get_int(yvar_t *var);
+int64_t yvar_get_int(const yvar_t *var);
 /** @function yvar_get_float	Return the floating-point number value of a yvar. */
-double yvar_get_float(yvar_t *var);
+double yvar_get_float(const yvar_t *var);
 /** @function yvar_get_const_string	Return the const string value of a yvar. */
-const char *yvar_get_const_string(yvar_t *var);
+const char *yvar_get_const_string(const yvar_t *var);
 /** @function yvar_get_string	Return the string value of a yvar. */
-ystr_t yvar_get_string(yvar_t *var);
+ystr_t yvar_get_string(const yvar_t *var);
 /** @function yvar_get_table	Return the table value of a yvar. */
-ytable_t *yvar_get_table(yvar_t *var);
+ytable_t *yvar_get_table(const yvar_t *var);
 /** @function yvar_get_pointer	Return the pointer value of a yvar. */
-void *yvar_get_pointer(yvar_t *var);
+void *yvar_get_pointer(const yvar_t *var);
 
 /* ********** PATH ********** */
 /**

@@ -35,6 +35,6 @@ void upload_files(agent_t *agent);
 	 * @param	agent	Pointer to the agent structure.
 	 * @return	The array of environment variables.
 	 */
-	yarray_t upload_create_env_aws_s3(agent_t *agent);
+	static yarray_t upload_create_env_aws_s3(agent_t *agent);
 #endif // __A_API_PRIVATE__
 

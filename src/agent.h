@@ -104,7 +104,7 @@
 	/** @const A_API_URL_SERVER_DECLARE	API URL for server declaration. */
 	#define A_API_URL_SERVER_DECLARE	"http://api.dev.arkiv.sh/v1/server/declare"
 	/** @const A_API_URL_BACKUP_REPORT	API URL for backup reporting. */
-	#define A_API_URL_BACKUP_REPORT		"https://api.dev.arkiv.sh/v1/backup/report"
+	#define A_API_URL_BACKUP_REPORT		"http://api.dev.arkiv.sh/v1/backup/report"
 #else
 	/** @const A_API_URL_PARAMS		API URL used to get server parameters. Parameters: org key, server name. */
 	#define A_API_URL_SERVER_PARAMS		"https://conf.arkiv.sh/v1/%s/%s/backup.json"
@@ -127,6 +127,12 @@
 #define A_PARAM_PATH_COMPRESSION_STRING		"/z"
 /** @const A_PARAM_PATH_SCHEDULES		Path to the schedules parameter. */
 #define A_PARAM_PATH_SCHEDULES			"/sch"
+/** @const A_PARAM_PATH_SCHEDULE_NAME		Path to the schedule name. */
+#define A_PARAM_PATH_SCHEDULE_NAME		"/schn"
+/** @const A_PARAM_PATH_RETENTION_TYPE		Path to the retention type. */
+#define A_PARAM_PATH_RETENTION_TYPE		"/rt"
+/** @const A_PARAM_PATH_RETENTION_DURATION	Path to the retention duration. */
+#define A_PARAM_PATH_RETENTION_DURATION		"/rd"
 /** @const A_PARAM_PATH_STORAGES		Path to the storages parameter. */
 #define A_PARAM_PATH_STORAGES			"/st"
 /** @const A_PARAM_PATH_SAVEPACKS		Path to the savepacks parameter. */
@@ -228,6 +234,22 @@ typedef enum {
 	A_COMP_ZSTD
 } compress_type_t;
 /**
+ * @typedef	retention_type_t
+ * @abstract	Defines a type of retention.
+ * @field	A_RETENTION_INFINITE	Infinite retention.
+ * @field	A_RETENTION_DAYS	Retention in days.
+ * @field	A_RETENTION_WEEKS	Retention in weeks.
+ * @field	A_RETENTION_MONTHS	Retention in months.
+ * @field	A_RETENTION_YEARS	Retention in years.
+ */
+typedef enum {
+	A_RETENTION_INFINITE = 0,
+	A_RETENTION_DAYS,
+	A_RETENTION_WEEKS,
+	A_RETENTION_MONTHS,
+	A_RETENTION_YEARS
+} retention_type_t;
+/**
  * @typedef	agent_t
  * @abstract	Main structure of the Arkiv agent.
  * @field	exec_timestamp		Unix timestamp of execution start.
@@ -292,6 +314,9 @@ typedef struct agent_s {
 	struct {
 		encrypt_type_t encryption;
 		compress_type_t compression;
+		ystr_t schedule_name;
+		retention_type_t retention_type;
+		uint8_t retention_duration;
 		ystr_t savepack_name;
 		ytable_t *pre_scripts;
 		ytable_t *post_scripts;
@@ -302,17 +327,6 @@ typedef struct agent_s {
 		yarray_t storage_env;
 	} param;
 	struct {
-		enum {
-			A_STATUS_STARTED = 0,
-			A_STATUS_NO_SCHEDULE,
-			A_STATUS_CREATED,
-			A_STATUS_SUCCESS,
-			A_STATUS_FAIL_PRE_SCRIPT,
-			A_STATUS_FAIL_FILE,
-			A_STATUS_FAIL_DATABASE,
-			A_STATUS_FAIL_UPDLOAD,
-			A_STATUS_FAIL_POST_SCRIPT
-		} status;
 		ytable_t *pre_scripts;
 		ytable_t *backup_files;
 		ytable_t *backup_databases;

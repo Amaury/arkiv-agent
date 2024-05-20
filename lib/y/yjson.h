@@ -68,7 +68,7 @@ yvar_t *yjson_parse_simple(yjson_parser_t *json, char *input);
  * @param	value	Pointer to the value node.
  * @param	pretty	True to have newlines and indentations.
  */
-void yjson_print(yvar_t *value, bool pretty);
+void yjson_print(const yvar_t *value, bool pretty);
 
 /**
  * @function	yjson_sprint
@@ -77,7 +77,7 @@ void yjson_print(yvar_t *value, bool pretty);
  * @param	pretty	True to have newlines and indentations.
  * @return	Allocated ystring.
  */
-ystr_t yjson_sprint(yvar_t *value, bool pretty);
+ystr_t yjson_sprint(const yvar_t *value, bool pretty);
 
 /**
  * @function	yjson_fprint
@@ -86,7 +86,7 @@ ystr_t yjson_sprint(yvar_t *value, bool pretty);
  * @param	value	Pointer to the value node.
  * @param	pretty	True to have newlines and indentations.
  */
-void yjson_fprint(FILE *stream, yvar_t *value, bool pretty);
+void yjson_fprint(FILE *stream, const yvar_t *value, bool pretty);
 
 /**
  * @function	yjson_write
@@ -96,7 +96,7 @@ void yjson_fprint(FILE *stream, yvar_t *value, bool pretty);
  * @param	pretty	True to have newlines and indentations.
  * @return	YENOERR if everything went fine.
  */
-ystatus_t yjson_write(const char *path, yvar_t *value, bool pretty);
+ystatus_t yjson_write(const char *path, const yvar_t *value, bool pretty);
 
 #if defined(__cplusplus) || defined(c_plusplus)
 }

@@ -82,7 +82,7 @@ void ytable_free(ytable_t *table);
  * @param	table	Pointer to the ytable.
  * @return	The cloned table.
  */
-ytable_t *ytable_clone(ytable_t *table);
+ytable_t *ytable_clone(const ytable_t *table);
 
 /* ********** ARRAY-LIKE ********** */
 /**
@@ -142,7 +142,7 @@ void *ytable_shift(ytable_t *table);
  * @param	index	Index of the searched element.
  * @return	true if the index exists.
  */
-bool ytable_index_exists(ytable_t *table, uint64_t index);
+bool ytable_index_exists(const ytable_t *table, uint64_t index);
 /**
  * @function	ytable_index_isset
  *		Tell if a given index exists and is set in a ytable.
@@ -150,7 +150,7 @@ bool ytable_index_exists(ytable_t *table, uint64_t index);
  * @param	index	Index of the searched element.
  * @return	true if the index exists and the associated value is not NULL.
  */
-bool ytable_index_isset(ytable_t *table, uint64_t index);
+bool ytable_index_isset(const ytable_t *table, uint64_t index);
 /**
  * @function	ytable_get_index
  *		Return the value associated to the given index.
@@ -160,7 +160,7 @@ bool ytable_index_isset(ytable_t *table, uint64_t index);
  *		YEINVAL if the table doesn't exist.
  *		YEUNDEF if the index doesn't exist.
  */
-yres_pointer_t ytable_get_index(ytable_t *table, uint64_t index);
+yres_pointer_t ytable_get_index(const ytable_t *table, uint64_t index);
 /**
  * @function	ytable_get_index_data
  *		Return the data value associated to the given index.
@@ -168,7 +168,7 @@ yres_pointer_t ytable_get_index(ytable_t *table, uint64_t index);
  * @param	index	Index of the element.
  * @return	A pointer to the element's data, or NULL if the element doesn't exist.
  */
-void *ytable_get_index_data(ytable_t *table, uint64_t index);
+void *ytable_get_index_data(const ytable_t *table, uint64_t index);
 /**
  * @function	ytable_set_index
  *		Add an element in a ytable using an index.
@@ -213,7 +213,7 @@ ystatus_t ytable_remove_index(ytable_t *table, uint64_t index);
  * @param	key	String key of the searched element.
  * @return	true if the string key exists.
  */
-bool ytable_key_exists(ytable_t *table, const char *key);
+bool ytable_key_exists(const ytable_t *table, const char *key);
 /**
  * @function	ytable_key_isset
  *		Tell if a given string key exists and is set in a ytable.
@@ -221,7 +221,7 @@ bool ytable_key_exists(ytable_t *table, const char *key);
  * @param	key	String key of the searched element.
  * @return	true if the string key exists and the associated value is not NULL.
  */
-bool ytable_key_isset(ytable_t *table, const char *key);
+bool ytable_key_isset(const ytable_t *table, const char *key);
 /**
  * @function	ytable_get_key
  *		Return the value associated to the given string key.
@@ -231,7 +231,7 @@ bool ytable_key_isset(ytable_t *table, const char *key);
  *		YEINVAL if the table doesn't exist.
  *		YEUNDEF if the key doesn't exist.
  */
-yres_pointer_t ytable_get_key(ytable_t *table, const char *key);
+yres_pointer_t ytable_get_key(const ytable_t *table, const char *key);
 /**
  * @function	ytable_get_key_data
  *		Return the data value associated to the given string key.
@@ -239,7 +239,7 @@ yres_pointer_t ytable_get_key(ytable_t *table, const char *key);
  * @param	key	String key of the search element.
  * @return	A pointer to the element's data, or NULL if the element doesn't exist.
  */
-void *ytable_get_key_data(ytable_t *table, const char *key);
+void *ytable_get_key_data(const ytable_t *table, const char *key);
 /**
  * @function	ytable_set_key
  *		Add an element in a ytable using a string key.
@@ -268,21 +268,21 @@ void *ytable_extract_key(ytable_t *table, const char *key);
  * @param	table	Pointer to the ytable.
  * @return	The length of the table.
  */
-uint32_t ytable_length(ytable_t *table);
+uint32_t ytable_length(const ytable_t *table);
 /**
  * @function	ytable_empty
  * @abstract	Tell if a tale is empty.
  * @param	table	Pointer to the ytable.
  * @return	True if the table is empty.
  */
-bool ytable_empty(ytable_t *table);
+bool ytable_empty(const ytable_t *table);
 /**
  * @function	ytable_is_array
  *		Tell if a ytable is used as an array (continuous list of elememnts).
  * @param	table	Pointer to the ytable.
  * @return	True if the table is an array.
  */
-bool ytable_is_array(ytable_t *table);
+bool ytable_is_array(const ytable_t *table);
 /**
  * @function	ytable_foreach
  *		Apply a function on every elements of a ytable.
@@ -291,5 +291,5 @@ bool ytable_is_array(ytable_t *table);
  * @param	user_data	Pointer to some user data.
  * @return	YENOERR if the callback returned YENOERR for all elements.
  */
-ystatus_t ytable_foreach(ytable_t *table, ytable_function_t func, void *user_data);
+ystatus_t ytable_foreach(const ytable_t *table, ytable_function_t func, void *user_data);
 

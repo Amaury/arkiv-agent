@@ -87,7 +87,7 @@ log_item_t *log_create_file(agent_t *agent, ystr_t path) {
 	log->type = A_ITEM_TYPE_FILE;
 	log->item = path;
 	log->success = true;
-	log->tar_status = YEUNDEF;
+	log->dump_status = YEUNDEF;
 	log->compress_status = YEUNDEF;
 	log->encrypt_status = YEUNDEF;
 	log->checksum_status = YEUNDEF;

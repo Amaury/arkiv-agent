@@ -39,7 +39,7 @@ typedef struct {
  * @field	checksum_name	Name of the checksum file.
  * @field	checksum_path	Path to the checksum file.
  * @field	success		True if the whole backup succeed.
- * @field	tar_status	Status of the tar execution.
+ * @field	dump_status	Status of the tar or db dump execution.
  * @field	compress_status	Status of the compression.
  * @field	encrypt_status	Status of the encryption.
  * @field	checksum_status	Status of the file's checksum computing.
@@ -56,7 +56,7 @@ typedef struct {
 	ystr_t checksum_name;
 	ystr_t checksum_path;
 	bool success;
-	ystatus_t tar_status;
+	ystatus_t dump_status;
 	ystatus_t compress_status;
 	ystatus_t encrypt_status;
 	ystatus_t checksum_status;

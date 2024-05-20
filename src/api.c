@@ -31,7 +31,7 @@ ystatus_t api_server_declare(const char *hostname, const char *orgKey) {
 	ys_printf(&agentVersion, "%f", A_AGENT_VERSION);
 	ytable_set_key(params, "version", agentVersion);
 	// API call
-	yres_pointer_t res = api_call(A_API_URL_SERVER_DECLARE, hostname, orgKey, params, true);
+	yres_pointer_t res = api_call(A_API_URL_SERVER_DECLARE, hostname, orgKey, params, NULL, true);
 	st = YRES_STATUS(res);
 	var = (yvar_t*)YRES_VAL(res);
 	if (st != YENOERR)
@@ -46,13 +46,200 @@ cleanup:
 	yvar_delete(var);
 	return (st);
 }
+/** Send the report of a backup. */
+ystatus_t api_backup_report(agent_t *agent) {
+	ystatus_t st = YENOERR;
+	bool st_global = true, st_pre = true, st_post = true, st_files = true, st_db = true;
+	yvar_t *report = yvar_new_table(NULL);
+	if (!report)
+		return (YENOMEM);
+	ytable_t *root = yvar_get_table(report);
+	yvar_t *var = NULL;
+	// timestamp
+	if (!(var = yvar_new_int((uint64_t)agent->exec_timestamp))) {
+		st = YENOMEM;
+		goto cleanup;
+	}
+	ytable_set_key(root, "timestamp", var);
+	// compression type
+	char *z = (agent->param.compression == A_COMP_GZIP) ? "g" :
+	          (agent->param.compression == A_COMP_BZIP2) ? "b" :
+	          (agent->param.compression == A_COMP_XZ) ? "x" :
+	          (agent->param.compression == A_COMP_ZSTD) ? "s" : "n";
+	if (!(var = yvar_new_const_string(z))) {
+		st = YENOMEM;
+		goto cleanup;
+	}
+	if ((st = ytable_set_key(root, "z", var)) != YENOERR)
+		goto cleanup;
+	var = NULL;
+	// encryption type
+	char *e = (agent->param.encryption == A_CRYPT_OPENSSL) ? "o" :
+	          (agent->param.encryption == A_CRYPT_SCRYPT) ? "s" :
+	          (agent->param.encryption == A_CRYPT_GPG) ? "g" : "u";
+	if (!(var = yvar_new_const_string(e))) {
+		st = YENOMEM;
+		goto cleanup;
+	}
+	if ((st = ytable_set_key(root, "e", var)) != YENOERR)
+		goto cleanup;
+	// retention
+	if (agent->param.retention_type != A_RETENTION_INFINITE &&
+	    agent->param.retention_duration) {
+		char *rt = (agent->param.retention_type == A_RETENTION_DAYS) ? "d" :
+		           (agent->param.retention_type == A_RETENTION_WEEKS) ? "w" :
+		           (agent->param.retention_type == A_RETENTION_MONTHS) ? "m" : "y";
+		if (!(var = yvar_new_const_string(rt))) {
+			st = YENOMEM;
+			goto cleanup;
+		}
+		if ((st = ytable_set_key(root, "rt", var)) != YENOERR)
+			goto cleanup;
+		if (!(var = yvar_new_int((int64_t)agent->param.retention_duration))) {
+			st = YENOMEM;
+			goto cleanup;
+		}
+		if ((st = ytable_set_key(root, "rd", var)) != YENOERR)
+			goto cleanup;
+	}
+	// storage name
+	if (!(var = yvar_new_const_string(agent->param.storage_name))) {
+		st = YENOMEM;
+		goto cleanup;
+	}
+	if ((st = ytable_set_key(root, "st", var)) != YENOERR)
+		goto cleanup;
+	// savepack name
+	if (!(var = yvar_new_const_string(agent->param.savepack_name))) {
+		st = YENOMEM;
+		goto cleanup;
+	}
+	if ((st = ytable_set_key(root, "sp", var)) != YENOERR)
+		goto cleanup;
+	// schedule name
+	if (!(var = yvar_new_const_string(agent->param.schedule_name))) {
+		st = YENOMEM;
+		goto cleanup;
+	}
+	if ((st = ytable_set_key(root, "sch", var)) != YENOERR)
+		goto cleanup;
+	// pre-scripts
+	if (!ytable_empty(agent->exec_log.pre_scripts)) {
+		if (!(var = yvar_new_table(NULL))) {
+			st = YENOMEM;
+			goto cleanup;
+		}
+		if ((st = ytable_set_key(root, "pre", var)) != YENOERR)
+			goto cleanup;
+		void *user_data[2] = {(void*)var, (void*)&st_pre};
+		ytable_foreach(agent->exec_log.pre_scripts, api_report_process_script, user_data);
+	}
+	// post-scripts
+	if (!ytable_empty(agent->exec_log.post_scripts)) {
+		if (!(var = yvar_new_table(NULL))) {
+			st = YENOMEM;
+			goto cleanup;
+		}
+		if ((st = ytable_set_key(root, "post", var)) != YENOERR)
+			goto cleanup;
+		void *user_data[2] = {(void*)var, (void*)&st_post};
+		ytable_foreach(agent->exec_log.post_scripts, api_report_process_script, user_data);
+	}
+	// files
+	if (!ytable_empty(agent->exec_log.backup_files)) {
+		if (!(var = yvar_new_table(NULL))) {
+			st = YENOMEM;
+			goto cleanup;
+		}
+		if ((st = ytable_set_key(root, "files", var)) != YENOERR)
+			goto cleanup;
+		void *user_data[2] = {(void*)var, (void*)&st_files};
+		ytable_foreach(agent->exec_log.backup_files, api_report_process_item, user_data);
+	}
+	// databases
+	if (!ytable_empty(agent->exec_log.backup_databases)) {
+		if (!(var = yvar_new_table(NULL))) {
+			st = YENOMEM;
+			goto cleanup;
+		}
+		if ((st = ytable_set_key(root, "db", var)) != YENOERR)
+			goto cleanup;
+		void *user_data[2] = {(void*)var, (void*)&st_db};
+		ytable_foreach(agent->exec_log.backup_databases, api_report_process_item, user_data);
+	}
+	// statuses
+	if (!st_pre || !st_post || !st_files || !st_db)
+		st_global = false;
+	if (!(var = yvar_new_bool(st_global))) {
+		st = YENOMEM;
+		goto cleanup;
+	}
+	if ((st = ytable_set_key(root, "st_global", var)) != YENOERR)
+		goto cleanup;
+	if (!(var = yvar_new_bool(st_pre))) {
+		st = YENOMEM;
+		goto cleanup;
+	}
+	if (!ytable_empty(agent->exec_log.pre_scripts)) {
+		if ((st = ytable_set_key(root, "st_pre", var)) != YENOERR)
+			goto cleanup;
+		if (!(var = yvar_new_bool(st_post))) {
+			st = YENOMEM;
+			goto cleanup;
+		}
+	}
+	if (!ytable_empty(agent->exec_log.post_scripts)) {
+		if ((st = ytable_set_key(root, "st_post", var)) != YENOERR)
+			goto cleanup;
+		if (!(var = yvar_new_bool(st_files))) {
+			st = YENOMEM;
+			goto cleanup;
+		}
+	}
+	if (!ytable_empty(agent->exec_log.backup_files)) {
+		if ((st = ytable_set_key(root, "st_files", var)) != YENOERR)
+			goto cleanup;
+		if (!(var = yvar_new_bool(st_files))) {
+			st = YENOMEM;
+			goto cleanup;
+		}
+	}
+	if (!ytable_empty(agent->exec_log.backup_databases)) {
+		if ((st = ytable_set_key(root, "st_db", var)) != YENOERR)
+			goto cleanup;
+		if (!(var = yvar_new_bool(st_db))) {
+			st = YENOMEM;
+			goto cleanup;
+		}
+	}
+	// API call
+	yres_pointer_t res = api_call(
+		A_API_URL_BACKUP_REPORT,
+		agent->conf.hostname,
+		agent->conf.org_key,
+		NULL,
+		report,
+		true
+	);
+	st = YRES_STATUS(res);
+	var = (yvar_t*)YRES_VAL(res);
+	if (st != YENOERR)
+		goto cleanup;
+	if (!yvar_isset(var) || !yvar_is_bool(var) || !yvar_get_bool(var)) {
+		st = YEUNDEF;
+		goto cleanup;
+	}
+cleanup:
+	yvar_delete(report);
+	return (st);
+}
 /* Fetch a host's parameters file. */
 yvar_t *api_get_params_file(agent_t *agent) {
 	// forge URL
 	ystr_t url = ys_printf(NULL, A_API_URL_SERVER_PARAMS, agent->conf.org_key, agent->conf.hostname);
 	ADEBUG("│ ├ " YANSI_FAINT "Download file: " YANSI_RESET "%s", url);
 	// fetch file
-	yres_pointer_t res = api_call(url, NULL, NULL, NULL, true);
+	yres_pointer_t res = api_call(url, NULL, NULL, NULL, NULL, true);
 	ys_free(url);
 	ystatus_t st = YRES_STATUS(res);
 	yvar_t *var = (yvar_t*)YRES_VAL(res);
@@ -72,7 +259,8 @@ yvar_t *api_get_params_file(agent_t *agent) {
 
 /* ********** STATIC FUNCTIONS ********** */
 /* Do a web request. */
-static yres_pointer_t api_call(const char *url, const char *user, const char *pwd, ytable_t *params, bool asJson) {
+static yres_pointer_t api_call(const char *url, const char *user, const char *pwd,
+                               const ytable_t *params, const yvar_t *post_data, bool asJson) {
 	ystr_t fullUrl = ys_new(url);
 	yres_bin_t res = {0};
 	ybin_t responseBin = {0};
@@ -90,11 +278,11 @@ static yres_pointer_t api_call(const char *url, const char *user, const char *pw
 		ytable_foreach(params, api_url_add_param, (void*)&foreachParam);
 	}
 	// call the external program
-	if (check_program_exists("curl"))
-		res = api_curl(url, user, pwd);
-	else if (check_program_exists("wget"))
-		res = api_wget(url, user, pwd);
-	else {
+	if (check_program_exists("curl")) {
+		res = api_curl(url, post_data, user, pwd);
+	} else if (check_program_exists("wget")) {
+		res = api_wget(url, post_data, user, pwd);
+	} else {
 		result = YRESULT_ERR(yres_pointer_t, YENOEXEC);
 		goto cleanup;
 	}
@@ -133,11 +321,13 @@ cleanup:
 	return (result);
 }
 /* Do a web request using curl. */
-static yres_bin_t api_curl(const char *url, const char *user, const char *pwd) {
+static yres_bin_t api_curl(const char *url, const yvar_t *post_data, const char *user, const char *pwd) {
 	yres_bin_t result = {0};
 	ystr_t curlPath = NULL;
 	ystr_t fileContent = NULL;
-	char *tmpPath = NULL;
+	char *configFilePath = NULL;
+	char *postFilePath = NULL;
+	ystr_t postFileOption = NULL;
 	yarray_t args = NULL;
 	ybin_t responseBin = {0};
 
@@ -162,16 +352,33 @@ static yres_bin_t api_curl(const char *url, const char *user, const char *pwd) {
 		(user && pwd) ? "\"\n" : ""
 	);
 	// create temporary file
-	tmpPath = yfile_tmp("/tmp/arkiv");
-	if (!tmpPath) {
+	configFilePath = yfile_tmp("/tmp/arkiv");
+	if (!configFilePath) {
 		result = YRESULT_ERR(yres_bin_t, YEIO);
 		goto cleanup;
 	}
-	yfile_put_string(tmpPath, fileContent);
-	// call curl
-	args = yarray_create(2);
+	yfile_put_string(configFilePath, fileContent);
+	// create POST data temporary file
+	if (post_data) {
+		postFilePath = yfile_tmp("/tmp/arkiv");
+		postFileOption = ys_printf(NULL, "@%s", postFilePath);
+		if (!postFilePath || !postFileOption) {
+			result = YRESULT_ERR(yres_bin_t, YEIO);
+			goto cleanup;
+		}
+		yjson_write(postFilePath, post_data, false);
+	}
+	// create argument list
+	args = yarray_create(6);
+	if (post_data) {
+		yarray_push(&args, "-X");
+		yarray_push(&args, "POST");
+		yarray_push(&args, "--data-binary");
+		yarray_push(&args, postFileOption);
+	}
 	yarray_push(&args, "--config");
-	yarray_push(&args, tmpPath);
+	yarray_push(&args, configFilePath);
+	// call curl
 	ystatus_t status = yexec(curlPath, args, NULL, &responseBin, NULL);
 	if (status == YENOERR) {
 		result = YRESULT_VAL(yres_bin_t, responseBin);
@@ -180,20 +387,26 @@ static yres_bin_t api_curl(const char *url, const char *user, const char *pwd) {
 	}
 cleanup:
 	ys_free(curlPath);
-	if (tmpPath)
-		unlink(tmpPath);
-	free0(tmpPath);
+	if (configFilePath)
+		unlink(configFilePath);
+	free0(configFilePath);
+	if (postFilePath)
+		unlink(postFilePath);
+	free0(postFilePath);
+	ys_free(postFileOption);
 	ys_free(fileContent);
 	yarray_free(args);
 	return (result);
 }
 /* Do a web request using wget. */
-static yres_bin_t api_wget(const char *url, const char *user, const char *pwd) {
+static yres_bin_t api_wget(const char *url, const yvar_t *post_data, const char *user, const char *pwd) {
 	yres_bin_t result = {0};
 	ystr_t wgetPath = NULL;
 	ystr_t fullUrl = NULL;
-	ystr_t ua = NULL;
-	char *tmpPath = NULL;
+	ystr_t ua_arg = NULL;
+	ystr_t post_arg = NULL;
+	char *urlFilePath = NULL;
+	char *postFilePath = NULL;
 	yarray_t args = NULL;
 	ybin_t responseBin = {0};
 
@@ -214,27 +427,45 @@ static yres_bin_t api_wget(const char *url, const char *user, const char *pwd) {
 		(user && pwd) ? "@" : "",
 		url
 	);
-	// create temporary file
-	tmpPath = yfile_tmp("/tmp/arkiv");
-	if (!tmpPath) {
+	// create URL temporary file
+	urlFilePath = yfile_tmp("/tmp/arkiv");
+	if (!urlFilePath) {
 		result = YRESULT_ERR(yres_bin_t, YEIO);
 		goto cleanup;
 	}
-	yfile_put_string(tmpPath, fullUrl);
-	// call wget
-	ua = ys_printf(NULL, "--user-agent=\"%s\"", _ARKIV_USER_AGENT);
-	args = yarray_create(7);
-	if (!ua || !args) {
+	yfile_put_string(urlFilePath, fullUrl);
+	// create POST data temporary file
+	if (post_data) {
+		postFilePath = yfile_tmp("/tmp/arkiv");
+		if (!postFilePath) {
+			result = YRESULT_ERR(yres_bin_t, YEIO);
+			goto cleanup;
+		}
+		yjson_write(postFilePath, post_data, false);
+	}
+	// create argument list
+	ua_arg = ys_printf(NULL, "--user-agent=\"%s\"", _ARKIV_USER_AGENT);
+	args = yarray_create(8);
+	if (!ua_arg || !args) {
 		result = YRESULT_ERR(yres_bin_t, YENOMEM);
 		goto cleanup;
 	}
 	yarray_push(&args, "-nv");
 	yarray_push(&args, "--auth-no-challenge");
-	yarray_push(&args, ua);
+	yarray_push(&args, ua_arg);
+	if (post_data) {
+		post_arg = ys_printf(NULL, "--post-file=\"%s\"", postFilePath);
+		if (!post_arg) {
+			result = YRESULT_ERR(yres_bin_t, YENOMEM);
+			goto cleanup;
+		}
+		yarray_push(&args, post_arg);
+	}
 	yarray_push(&args, "-i");
-	yarray_push(&args, tmpPath);
+	yarray_push(&args, urlFilePath);
 	yarray_push(&args, "-O");
 	yarray_push(&args, "-");
+	// call wget
 	ystatus_t status = yexec(wgetPath, args, NULL, &responseBin, NULL);
 	if (status == YENOERR) {
 		result = YRESULT_VAL(yres_bin_t, responseBin);
@@ -243,10 +474,14 @@ static yres_bin_t api_wget(const char *url, const char *user, const char *pwd) {
 	}
 cleanup:
 	ys_free(wgetPath);
-	ys_free(ua);
-	if (tmpPath)
-		unlink(tmpPath);
-	free0(tmpPath);
+	ys_free(ua_arg);
+	ys_free(post_arg);
+	if (urlFilePath)
+		unlink(urlFilePath);
+	free0(urlFilePath);
+	if (postFilePath)
+		unlink(postFilePath);
+	free0(postFilePath);
 	ys_free(fullUrl);
 	yarray_free(args);
 	return (result);
@@ -271,5 +506,46 @@ static ystatus_t api_url_add_param(uint64_t hash, char *key, void *data, void *u
 	}
 	param->offset++;
 	return (YENOERR);
+}
+/* Add a script to the report. */
+static ystatus_t api_report_process_script(uint64_t hash, char *key, void *data, void *user_data) {
+	void **user_data_array = (void**)user_data;
+	yvar_t *var = (yvar_t*)user_data_array[0];
+	ytable_t *scripts = yvar_get_table(var);
+	ystatus_t *st_script = (ystatus_t*)user_data_array[1];
+	log_script_t *entry = (log_script_t*)data;
+
+	if (!entry->success)
+		*st_script = false;
+	if (!(var = yvar_new_bool(entry->success)))
+		return (YENOMEM);
+	return (ytable_set_key(scripts, entry->command, var));
+}
+/** Add a file or database to the report. */
+static ystatus_t api_report_process_item(uint64_t hash, char *key, void *data, void *user_data) {
+	void **user_data_array = (void**)user_data;
+	yvar_t *var = (yvar_t*)user_data_array[0];
+	ytable_t *items = yvar_get_table(var);
+	ystatus_t *st_items = (ystatus_t*)user_data_array[1];
+	log_item_t *item = (log_item_t*)data;
+
+	if (!item->success)
+		*st_items = false;
+	ystr_t ys = ys_new("");
+	if (!ys)
+		return (YENOMEM);
+	if (item->dump_status == YENOERR)
+		ys_addc(&ys, 'd');
+	if (item->compress_status == YENOERR)
+		ys_addc(&ys, 'z');
+	if (item->encrypt_status == YENOERR)
+		ys_addc(&ys, 'e');
+	if (item->checksum_status == YENOERR)
+		ys_addc(&ys, 'c');
+	if (item->upload_status == YENOERR)
+		ys_addc(&ys, 'u');
+	if (!(var = yvar_new_string(ys)))
+		return (YENOMEM);
+	return (ytable_set_key(items, item->item, var));
 }
 

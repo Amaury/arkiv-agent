@@ -12,7 +12,7 @@
 /* Private functions */
 static void _yjson_fsprint_string(char *output, ystr_t *str, FILE *stream);
 static ystatus_t _yjson_table_print_elem(uint64_t index, char *key, void *data, void *user_data);
-static void _yjson_value_fsprint(yvar_t *value, ystr_t *str, FILE *stream, uint32_t depth, bool linefeed);
+static void _yjson_value_fsprint(const yvar_t *value, ystr_t *str, FILE *stream, uint32_t depth, bool linefeed);
 static ystatus_t _yjson_remove_space(yjson_parser_t *json);
 static yvar_t _yjson_parse_chunk(yjson_parser_t *json);
 static void _yjson_parse_string(yjson_parser_t *json, yvar_t *value);
@@ -92,26 +92,26 @@ yvar_t *yjson_parse_simple(yjson_parser_t *json, char *input) {
 
 /* ********** PRINT/WRITE JSON ********** */
 /* Prints a JSON value node and its subnodes, with newlines and tabulations. */
-void yjson_print(yvar_t *value, bool pretty) {
+void yjson_print(const yvar_t *value, bool pretty) {
 	_yjson_value_fsprint(value, NULL, stdout, 0, pretty);
 	if (pretty)
 		printf("\n");
 }
 /* Creates a string which contains the JSON stream of a value node. */
-ystr_t yjson_sprint(yvar_t *value, bool pretty) {
+ystr_t yjson_sprint(const yvar_t *value, bool pretty) {
 	ystr_t ys = ys_new("");
 	_yjson_value_fsprint(value, &ys, NULL, 0, pretty);
 	return (ys);
 }
 /* Prints a JSON value node and its subnodes to a stream. */
-void yjson_fprint(FILE *stream, yvar_t *value, bool pretty) {
+void yjson_fprint(FILE *stream, const yvar_t *value, bool pretty) {
 	_yjson_value_fsprint(value, NULL, stream, 0, pretty);
 	if (pretty)
 		fprintf(stream, "\n");
 }
 /* Write a JSON stream in a file. */
-ystatus_t yjson_write(const char *path, yvar_t *value, bool pretty) {
-	FILE *stream = fopen(path, "w+");
+ystatus_t yjson_write(const char *path, const yvar_t *value, bool pretty) {
+	FILE *stream = fopen(path, "w");
 	if (!stream) {
 		if (errno == ENOMEM)
 			return (YENOMEM);
@@ -170,7 +170,7 @@ static void _yjson_fsprint_string(char *output, ystr_t *str, FILE *stream) {
 		fprintf(stream, "%s", output);
 }
 /* Write a value in a string or a stream. */
-static void _yjson_value_fsprint(yvar_t *value, ystr_t *str, FILE *stream, uint32_t depth, bool linefeed) {
+static void _yjson_value_fsprint(const yvar_t *value, ystr_t *str, FILE *stream, uint32_t depth, bool linefeed) {
 	if (!value) {
 		_yjson_fsprint_string("(unset)", str, stream);
 	} else if (yvar_is_undef(value)) {

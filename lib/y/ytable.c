@@ -118,7 +118,7 @@ void ytable_free(ytable_t *table) {
 	free0(table);
 }
 /* Clone a ytable. */
-ytable_t *ytable_clone(ytable_t *table) {
+ytable_t *ytable_clone(const ytable_t *table) {
 	if (!table)
 		return (NULL);
 	// create new table
@@ -337,21 +337,21 @@ void *ytable_shift(ytable_t *table) {
 
 /* ********** INDEXED FUNCTIONS ********** */
 /* Tell if a given index exists in a ytable. */
-bool ytable_index_exists(ytable_t *table, uint64_t index) {
+bool ytable_index_exists(const ytable_t *table, uint64_t index) {
 	yres_pointer_t res = ytable_get_index(table, index);
 	if (YRES_STATUS(res) == YENOERR)
 		return (true);
 	return (false);
 }
 /* Tell if a given index exists and is set in a ytable. */
-bool ytable_index_isset(ytable_t *table, uint64_t index) {
+bool ytable_index_isset(const ytable_t *table, uint64_t index) {
 	yres_pointer_t res = ytable_get_index(table, index);
 	if (YRES_STATUS(res) == YENOERR && YRES_VAL(res))
 		return (true);
 	return (false);
 }
 /* Return the value associated to the given index. */
-yres_pointer_t ytable_get_index(ytable_t *table, uint64_t index) {
+yres_pointer_t ytable_get_index(const ytable_t *table, uint64_t index) {
 	if (!table)
 		return (YRESULT_ERR(yres_pointer_t, YEINVAL));
 	if (!table->length)
@@ -384,7 +384,7 @@ yres_pointer_t ytable_get_index(ytable_t *table, uint64_t index) {
 	return (YRESULT_ERR(yres_pointer_t, YEUNDEF));
 }
 /* Return the data value associated to the given index. */
-void *ytable_get_index_data(ytable_t *table, uint64_t index) {
+void *ytable_get_index_data(const ytable_t *table, uint64_t index) {
 	yres_pointer_t res = ytable_get_index(table, index);
 	RETURN_NULL_IF_ERR(YRES_STATUS(res));
 	return (YRES_VAL(res));
@@ -582,21 +582,21 @@ shift_elements:
 
 /* ********** KEYED FUNCTIONS ********** */
 /* Tell if a given string key exists in a ytable. */
-bool ytable_key_exists(ytable_t *table, const char *key) {
+bool ytable_key_exists(const ytable_t *table, const char *key) {
 	yres_pointer_t res = ytable_get_key(table, key);
 	if (YRES_STATUS(res) == YENOERR)
 		return (true);
 	return (false);
 }
 /* Tell if a given string key exists and is set in a ytable. */
-bool ytable_key_isset(ytable_t *table, const char *key) {
+bool ytable_key_isset(const ytable_t *table, const char *key) {
 	yres_pointer_t res = ytable_get_key(table, key);
 	if (YRES_STATUS(res) == YENOERR && YRES_VAL(res) != NULL)
 		return (true);
 	return (false);
 }
 /* Return the value associated to the given string key. */
-yres_pointer_t ytable_get_key(ytable_t *table, const char *key) {
+yres_pointer_t ytable_get_key(const ytable_t *table, const char *key) {
 	if (!table)
 		return (YRESULT_ERR(yres_pointer_t, YEINVAL));
 	if (!table->length || !table->buckets)
@@ -628,7 +628,7 @@ yres_pointer_t ytable_get_key(ytable_t *table, const char *key) {
 	return (YRESULT_ERR(yres_pointer_t, YEUNDEF));
 }
 /* Return the data value associated to the given string key. */
-void *ytable_get_key_data(ytable_t *table, const char *key) {
+void *ytable_get_key_data(const ytable_t *table, const char *key) {
 	yres_pointer_t res = ytable_get_key(table, key);
 	RETURN_NULL_IF_ERR(YRES_STATUS(res));
 	return (YRES_VAL(res));
@@ -693,25 +693,25 @@ nobucket:
 
 /* ********** GENERAL FUNCTIONS ********** */
 /* Return the used length of a ytable. */
-uint32_t ytable_length(ytable_t *table) {
+uint32_t ytable_length(const ytable_t *table) {
 	if (!table)
 		return (0);
 	return (table->length);
 }
 /* Tell if a table is empty. */
-bool ytable_empty(ytable_t *table) {
+bool ytable_empty(const ytable_t *table) {
 	if (!table || !table->length)
 		return (true);
 	return (false);
 }
 /* Tell if a ytable is used as an array (continuous list of elememnts). */
-bool ytable_is_array(ytable_t *table) {
+bool ytable_is_array(const ytable_t *table) {
 	if (!table || !table->buckets)
 		return (true);
 	return (false);
 }
 /* Apply a function on every elements of a ytable. */
-ystatus_t ytable_foreach(ytable_t *table, ytable_function_t func, void *user_data) {
+ystatus_t ytable_foreach(const ytable_t *table, ytable_function_t func, void *user_data) {
 	if (!table)
 		return (YEINVAL);
 	if (!table->length || !func)
