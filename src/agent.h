@@ -315,14 +315,17 @@ typedef struct agent_s {
 		encrypt_type_t encryption;
 		compress_type_t compression;
 		ystr_t schedule_name;
+		uint64_t schedule_id;
 		retention_type_t retention_type;
 		uint8_t retention_duration;
 		ystr_t savepack_name;
+		uint64_t savepack_id;
 		ytable_t *pre_scripts;
 		ytable_t *post_scripts;
 		ytable_t *files;
 		ytable_t *databases;
 		ystr_t storage_name;
+		uint64_t storage_id;
 		ytable_t *storage;
 		yarray_t storage_env;
 	} param;

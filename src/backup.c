@@ -76,8 +76,15 @@ void exec_backup(agent_t *agent) {
 	}
 	// send report
 	ALOG("Send report to arkiv.sh");
-	if (api_backup_report(agent) == YENOERR)
+	st = api_backup_report(agent);
+	if (st == YENOERR)
 		ALOG("└ " YANSI_GREEN "Done" YANSI_RESET);
+	else if (st == YENOMEM)
+		ALOG("└ " YANSI_RED "Failed (memory allocation error)" YANSI_RESET);
+	else if (st == YENOEXEC)
+		ALOG("└ " YANSI_RED "Failed (can't find curl nor wget)" YANSI_RESET);
+	else if (st == YEFAULT)
+		ALOG("└ " YANSI_RED "Failed (communication error" YANSI_RESET);
 	else
 		ALOG("└ " YANSI_RED "Failed" YANSI_RESET);
 	// execute post-scripts

@@ -403,12 +403,13 @@ static yres_bin_t api_wget(const char *url, const yvar_t *post_data, const char 
 	yres_bin_t result = {0};
 	ystr_t wgetPath = NULL;
 	ystr_t fullUrl = NULL;
-	ystr_t ua_arg = NULL;
-	ystr_t post_arg = NULL;
 	char *urlFilePath = NULL;
 	char *postFilePath = NULL;
 	yarray_t args = NULL;
 	ybin_t responseBin = {0};
+	bool https = true;
+	const char *usedUrl = url;
+	ystatus_t status;
 
 	// check parmeter
 	if (!url || !strlen(url))
@@ -417,15 +418,23 @@ static yres_bin_t api_wget(const char *url, const yvar_t *post_data, const char 
 	wgetPath = get_program_path("wget");
 	if (!wgetPath)
 		return (YRESULT_ERR(yres_bin_t, YENOEXEC));
+	// check for HTTP or HTTPS
+	if (!strncmp0(url, "http://", 7)) {
+		https = false;
+		usedUrl = url + 7;
+	} else {
+		usedUrl = url + 8;
+	}
 	// create the full URL string
 	fullUrl = ys_printf(
 		NULL,
-		"https://%s%s%s%s%s",
+		"%s://%s%s%s%s%s",
+		https ? "https" : "http",
 		(user && pwd) ? user : "",
 		(user && pwd) ? ":" : "",
 		(user && pwd) ? pwd : "",
 		(user && pwd) ? "@" : "",
-		url
+		usedUrl
 	);
 	// create URL temporary file
 	urlFilePath = yfile_tmp("/tmp/arkiv");
@@ -436,37 +445,31 @@ static yres_bin_t api_wget(const char *url, const yvar_t *post_data, const char 
 	yfile_put_string(urlFilePath, fullUrl);
 	// create POST data temporary file
 	if (post_data) {
-		postFilePath = yfile_tmp("/tmp/arkiv");
-		if (!postFilePath) {
+		if (!(postFilePath = yfile_tmp("/tmp/arkiv"))) {
 			result = YRESULT_ERR(yres_bin_t, YEIO);
 			goto cleanup;
 		}
-		yjson_write(postFilePath, post_data, false);
-	}
-	// create argument list
-	ua_arg = ys_printf(NULL, "--user-agent=\"%s\"", _ARKIV_USER_AGENT);
-	args = yarray_create(8);
-	if (!ua_arg || !args) {
-		result = YRESULT_ERR(yres_bin_t, YENOMEM);
-		goto cleanup;
-	}
-	yarray_push(&args, "-nv");
-	yarray_push(&args, "--auth-no-challenge");
-	yarray_push(&args, ua_arg);
-	if (post_data) {
-		post_arg = ys_printf(NULL, "--post-file=\"%s\"", postFilePath);
-		if (!post_arg) {
-			result = YRESULT_ERR(yres_bin_t, YENOMEM);
+		if ((status = yjson_write(postFilePath, post_data, false)) != YENOERR) {
+			result = YRESULT_ERR(yres_bin_t, status);
 			goto cleanup;
 		}
-		yarray_push(&args, post_arg);
+	}
+	// create argument list
+	args = yarray_create(10);
+	yarray_push(&args, "-nv");
+	yarray_push(&args, "--auth-no-challenge");
+	yarray_push(&args, "-U");
+	yarray_push(&args, _ARKIV_USER_AGENT);
+	if (post_data) {
+		yarray_push(&args, "--post-file");
+		yarray_push(&args, postFilePath);
 	}
 	yarray_push(&args, "-i");
 	yarray_push(&args, urlFilePath);
 	yarray_push(&args, "-O");
 	yarray_push(&args, "-");
 	// call wget
-	ystatus_t status = yexec(wgetPath, args, NULL, &responseBin, NULL);
+	status = yexec(wgetPath, args, NULL, &responseBin, NULL);
 	if (status == YENOERR) {
 		result = YRESULT_VAL(yres_bin_t, responseBin);
 	} else {
@@ -474,8 +477,6 @@ static yres_bin_t api_wget(const char *url, const yvar_t *post_data, const char 
 	}
 cleanup:
 	ys_free(wgetPath);
-	ys_free(ua_arg);
-	ys_free(post_arg);
 	if (urlFilePath)
 		unlink(urlFilePath);
 	free0(urlFilePath);

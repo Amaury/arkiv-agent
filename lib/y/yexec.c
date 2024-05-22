@@ -94,7 +94,7 @@ ystatus_t yexec(const char *command, yarray_t args, yarray_t env,
 	    WIFSIGNALED(exec_status)) {
 		//YLOG_ADD(YLOG_WARN, "Unexpected end of process '%s' (%d).", command,
 		//         WEXITSTATUS(exec_status));
-		status = YENOEXEC;
+		status = YEFAULT;
 	}
 cleanup:
 	free0(arg_list);
