@@ -273,7 +273,6 @@ typedef enum {
  * @field	bin.checksum		Path to the sha512sum.
  * @field	param.encryption	Encryption algorithm.
  * @field	param.compression	Compression algorithm.
- * @field	param.savepack_name	Name of the used savepack.
  * @field	param.pre_scripts	List of pre-scripts.
  * @field	param.post_scripts	List of post-scripts.
  * @field	param.files		List of files to back up.
@@ -306,6 +305,7 @@ typedef struct agent_s {
 		bool use_stdout;
 	} conf;
 	struct {
+		ystr_t find;
 		ystr_t tar;
 		ystr_t z;
 		ystr_t crypt;
@@ -314,11 +314,8 @@ typedef struct agent_s {
 	struct {
 		encrypt_type_t encryption;
 		compress_type_t compression;
-		ystr_t schedule_name;
-		uint64_t schedule_id;
 		retention_type_t retention_type;
 		uint8_t retention_duration;
-		ystr_t savepack_name;
 		uint64_t savepack_id;
 		ytable_t *pre_scripts;
 		ytable_t *post_scripts;

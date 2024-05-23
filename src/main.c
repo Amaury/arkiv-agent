@@ -18,6 +18,7 @@
 #include "configuration.h"
 #include "declare.h"
 #include "backup.h"
+#include "log.h"
 
 /* *** declaration of private functions *** */
 void _agent_usage(const char *progname);
@@ -57,18 +58,18 @@ int main(int argc, char *argv[]) {
 	} else {
 		// load configuration file
 		agent_load_configuration(agent);
-		if (agent->debug_mode) {
-			printf("agent_path           : '%s'\n", agent->agent_path);
-			printf("conf_path            : '%s'\n", agent->conf_path);
-			printf("execution timestamp  : '%.f'\n", difftime(agent->exec_timestamp, (time_t)0));
-			printf("debug_mode           : '%s'\n", agent->debug_mode ? "true" : "false");
-			printf("conf.logfile         : '%s'\n", agent->conf.logfile);
-			printf("conf.archives_path   : '%s'\n", agent->conf.archives_path);
-			printf("conf.org_key         : '%s'\n", agent->conf.org_key);
-			printf("conf.hostname        : '%s'\n", agent->conf.hostname);
-			printf("conf.crypt_pwd       : '%s'\n", agent->conf.crypt_pwd);
-			printf("conf.use_syslog      : '%s'\n", agent->conf.use_syslog ? "true" : "false");
-		}
+		// show debug data
+		ADEBUG_RAW(YANSI_NEGATIVE "------------------------- DEBUG VARIABLES -------------------------" YANSI_RESET);
+		ADEBUG_RAW("agent_path           : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->agent_path);
+		ADEBUG_RAW("conf_path            : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->conf_path);
+		ADEBUG_RAW("execution timestamp  : '" YANSI_FAINT "%.f" YANSI_RESET "'", difftime(agent->exec_timestamp, (time_t)0));
+		ADEBUG_RAW("debug_mode           : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->debug_mode ? "true" : "false");
+		ADEBUG_RAW("conf.logfile         : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->conf.logfile);
+		ADEBUG_RAW("conf.archives_path   : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->conf.archives_path);
+		ADEBUG_RAW("conf.org_key         : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->conf.org_key);
+		ADEBUG_RAW("conf.hostname        : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->conf.hostname);
+		ADEBUG_RAW("conf.crypt_pwd       : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->conf.crypt_pwd);
+		ADEBUG_RAW("conf.use_syslog      : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->conf.use_syslog ? "true" : "false");
 		// execution
 		if (exec_type == A_TYPE_DECLARE) {
 			// server declaration

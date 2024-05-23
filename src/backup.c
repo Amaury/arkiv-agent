@@ -21,8 +21,15 @@ static const char *DAYS_OF_THE_WEEK[] = {"sun", "mon", "tue", "wed", "thu", "fri
 void exec_backup(agent_t *agent) {
 	ystatus_t st;
 
-	ALOG_RAW(YANSI_NEGATIVE "---------------------------" YANSI_RESET);
-	ALOG("Start backup");
+	ALOG_RAW(YANSI_NEGATIVE "------------------------- AGENT EXECUTION -------------------------" YANSI_RESET);
+	/* local programs */
+	ALOG("Search local programs");
+	// get find path
+	if (!(agent->bin.find = get_program_path("find"))) {
+		ALOG("└ " YANSI_RED "Unable to find " YANSI_RESET "find" YANSI_RED " program" YANSI_RESET);
+		ALOG(YANSI_RED "Abort" YANSI_RESET);
+		return;
+	}
 	// get tar path
 	if (!(agent->bin.tar = get_program_path("tar"))) {
 		ALOG("└ " YANSI_RED "Unable to find " YANSI_RESET "tar" YANSI_RED " program" YANSI_RESET);
@@ -41,7 +48,17 @@ void exec_backup(agent_t *agent) {
 		ALOG(YANSI_RED "Abort" YANSI_RESET);
 		return;
 	}
+	ALOG("└ " YANSI_GREEN "Done" YANSI_RESET);
+
+	/* purge old local archives */
+	st = backup_purge_local(agent);
+	if (st != YENOERR) {
+		ALOG(YANSI_BG_RED "Abort" YANSI_RESET);
+		return;
+	}
+
 	// fetch parameters file
+	ALOG("Start backup");
 	st = backup_fetch_params(agent);
 	if (st == YEAGAIN) {
 		ALOG(YANSI_GREEN "✓ End of processing" YANSI_RESET);
@@ -94,6 +111,59 @@ void exec_backup(agent_t *agent) {
 }
 
 /* ********** PRIVATE FUNCTIONS ********** */
+/* Purge local archive files. */
+static ystatus_t backup_purge_local(agent_t *agent) {
+	ystatus_t status = YENOERR;
+	yarray_t args = NULL;
+
+	ALOG("Purge local archives");
+	if (!(args = yarray_create(6))) {
+		ALOG("└ " YANSI_RED "Memory allocation error" YANSI_RESET);
+		return (YENOMEM);
+	}
+	// removes files older than 24 hours
+	ADEBUG("├ " YANSI_FAINT "Delete archives older than 24 hours" YANSI_RESET);
+	yarray_push_multi(
+		&args,
+		6,
+		agent->conf.archives_path,
+		"-type",
+		"f",
+		"-mtime",
+		"+1",
+		"-delete"
+	);
+	status = yexec(agent->bin.find, args, NULL, NULL, NULL);
+	if (status == YENOERR) {
+		ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
+	} else {
+		ALOG("└ " YANSI_RED "Error" YANSI_RESET);
+		goto cleanup;
+	}
+	// removes empty directories
+	ADEBUG("├ " YANSI_FAINT "Delete empty archive folders" YANSI_RESET);
+	yarray_trunc(args, NULL, NULL);
+	yarray_push_multi(
+		&args,
+		5,
+		agent->conf.archives_path,
+		"-type",
+		"d",
+		"-empty",
+		"-delete"
+	);
+	status = yexec(agent->bin.find, args, NULL, NULL, NULL);
+	if (status == YENOERR) {
+		ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
+	} else {
+		ALOG("└ " YANSI_RED "Execution error" YANSI_RESET);
+		goto cleanup;
+	}
+	ALOG("└ " YANSI_GREEN "Done" YANSI_RESET);
+cleanup:
+	yarray_free(args);
+	return (status);
+}
 /* Fetch and process host backup parameter file. */
 static ystatus_t backup_fetch_params(agent_t *agent) {
 	ALOG("├ " YANSI_FAINT "Fetch host parameters" YANSI_RESET);
@@ -174,13 +244,6 @@ static ystatus_t backup_fetch_params(agent_t *agent) {
 		}
 	}
 
-	// get schedule name
-	var_ptr = yvar_get_from_path(params, A_PARAM_PATH_SCHEDULE_NAME);
-	if (!var_ptr || !yvar_is_string(var_ptr) || !(agent->param.schedule_name = yvar_get_string(var_ptr))) {
-		ALOG("└ " YANSI_RED "Unable to find schedule name" YANSI_RESET);
-		return (YEBADCONF);
-	}
-	ADEBUG("├ " YANSI_FAINT "Schedule name: " YANSI_RESET "%s", agent->param.schedule_name);
 	// extract schedules
 	var_ptr = yvar_get_from_path(params, A_PARAM_PATH_SCHEDULES);
 	ytable_t *schedules = yvar_get_table(var_ptr);
@@ -235,6 +298,7 @@ static ystatus_t backup_fetch_params(agent_t *agent) {
 	}
 	int64_t savepack_id = yvar_get_int(var_ptr2);
 	ADEBUG("│ └ " YANSI_FAINT "Savepack ID: " YANSI_RESET "%" PRId64, savepack_id);
+	agent->param.savepack_id = savepack_id;
 	// from the schedule, get the storage ID
 	ADEBUG("├ " YANSI_FAINT "From the schedule, extract the storage ID" YANSI_RESET);
 	var_ptr2 = yvar_get_from_path(schedule, A_PARAM_PATH_STORAGES);
@@ -244,6 +308,7 @@ static ystatus_t backup_fetch_params(agent_t *agent) {
 	}
 	int64_t storage_id = yvar_get_int(var_ptr2);
 	ADEBUG("│ └ " YANSI_FAINT "Storage ID: " YANSI_RESET "%" PRId64, storage_id);
+	agent->param.storage_id = storage_id;
 
 	// search the savepack
 	ADEBUG("├ " YANSI_FAINT "Search for the savepack from its ID" YANSI_RESET);
@@ -259,13 +324,6 @@ static ystatus_t backup_fetch_params(agent_t *agent) {
 		return (YEBADCONF);
 	}
 	ADEBUG("│ ├ " YANSI_FAINT "Savepack found" YANSI_RESET);
-	// get savepack name
-	var_ptr2 = yvar_get_from_path(savepack, A_PARAM_PATH_NAME);
-	if (!var_ptr2 || !yvar_is_string(var_ptr2) || !(agent->param.savepack_name = yvar_get_string(var_ptr2))) {
-		ALOG("└ " YANSI_RED "Unable to find savepack name (ID %" PRId64 ")" YANSI_RESET, savepack_id);
-		return (YEBADCONF);
-	}
-	ADEBUG("│ ├ " YANSI_FAINT "Savepack name: " YANSI_RESET "%s", agent->param.savepack_name);
 	// get pre-scripts
 	var_ptr2 = yvar_get_from_path(savepack, A_PARAM_PATH_PRE);
 	if (var_ptr2 && yvar_is_table(var_ptr2)) {
@@ -308,14 +366,13 @@ static ystatus_t backup_fetch_params(agent_t *agent) {
 		ALOG("└ " YANSI_RED "Unable to find storage (ID %" PRId64 ")" YANSI_RESET, storage_id);
 		return (YEBADCONF);
 	}
-	ADEBUG("│ ├ " YANSI_FAINT "Storage found" YANSI_RESET);
 	// get storage name
 	var_ptr2 = yvar_get_from_path(storage, A_PARAM_PATH_NAME);
 	if (!var_ptr2 || !yvar_is_string(var_ptr2) || !(agent->param.storage_name = yvar_get_string(var_ptr2))) {
 		ALOG("└ " YANSI_RED "Unable to find storage name (ID %" PRId64 ")" YANSI_RESET, storage_id);
 		return (YEBADCONF);
 	}
-	ADEBUG("│ └ " YANSI_FAINT "Storage name: " YANSI_RESET "%s", agent->param.storage_name);
+	ADEBUG("│ └ " YANSI_FAINT "Storage found: " YANSI_RESET "%s", agent->param.storage_name);
 	
 	return (YENOERR);
 }
@@ -591,7 +648,7 @@ static void backup_encrypt_files(agent_t *agent) {
 		return;
 	// log message
 	ALOG(
-		"Encrypt files using %s",
+		"Encrypt files using " YANSI_FAINT "%s" YANSI_RESET,
 		(agent->param.encryption == A_CRYPT_GPG) ? "gpg" :
 		(agent->param.encryption == A_CRYPT_SCRYPT) ? "scrypt" :
 		(agent->param.encryption == A_CRYPT_OPENSSL) ? "openssl" : "undef"

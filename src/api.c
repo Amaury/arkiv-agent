@@ -55,12 +55,13 @@ ystatus_t api_backup_report(agent_t *agent) {
 		return (YENOMEM);
 	ytable_t *root = yvar_get_table(report);
 	yvar_t *var = NULL;
+
 	// timestamp
 	if (!(var = yvar_new_int((uint64_t)agent->exec_timestamp))) {
 		st = YENOMEM;
 		goto cleanup;
 	}
-	ytable_set_key(root, "timestamp", var);
+	ytable_set_key(root, "t", var);
 	// compression type
 	char *z = (agent->param.compression == A_COMP_GZIP) ? "g" :
 	          (agent->param.compression == A_COMP_BZIP2) ? "b" :
@@ -102,26 +103,12 @@ ystatus_t api_backup_report(agent_t *agent) {
 		if ((st = ytable_set_key(root, "rd", var)) != YENOERR)
 			goto cleanup;
 	}
-	// storage name
-	if (!(var = yvar_new_const_string(agent->param.storage_name))) {
+	// storage ID
+	if (!(var = yvar_new_int(agent->param.storage_id))) {
 		st = YENOMEM;
 		goto cleanup;
 	}
 	if ((st = ytable_set_key(root, "st", var)) != YENOERR)
-		goto cleanup;
-	// savepack name
-	if (!(var = yvar_new_const_string(agent->param.savepack_name))) {
-		st = YENOMEM;
-		goto cleanup;
-	}
-	if ((st = ytable_set_key(root, "sp", var)) != YENOERR)
-		goto cleanup;
-	// schedule name
-	if (!(var = yvar_new_const_string(agent->param.schedule_name))) {
-		st = YENOMEM;
-		goto cleanup;
-	}
-	if ((st = ytable_set_key(root, "sch", var)) != YENOERR)
 		goto cleanup;
 	// pre-scripts
 	if (!ytable_empty(agent->exec_log.pre_scripts)) {
@@ -213,6 +200,13 @@ ystatus_t api_backup_report(agent_t *agent) {
 		}
 	}
 	// API call
+	if (agent->debug_mode) {
+		ystr_t ys = yjson_sprint(report, true);
+		if (ys) {
+			ADEBUG("│ └ " YANSI_FAINT "Report:\n" YANSI_RESET YANSI_YELLOW "%s" YANSI_RESET, ys);
+			ys_free(ys);
+		}
+	}
 	yres_pointer_t res = api_call(
 		A_API_URL_BACKUP_REPORT,
 		agent->conf.hostname,
@@ -527,26 +521,41 @@ static ystatus_t api_report_process_item(uint64_t hash, char *key, void *data, v
 	void **user_data_array = (void**)user_data;
 	yvar_t *var = (yvar_t*)user_data_array[0];
 	ytable_t *items = yvar_get_table(var);
-	ystatus_t *st_items = (ystatus_t*)user_data_array[1];
+	bool *st_items = (bool*)user_data_array[1];
 	log_item_t *item = (log_item_t*)data;
 
-	if (!item->success)
+	if (item->success) {
+		// item successfully backed up
+		if (!(var = yvar_new_bool(true)))
+			return (YENOMEM);
+	} else {
+		// there was an error during item's backup
 		*st_items = false;
-	ystr_t ys = ys_new("");
-	if (!ys)
-		return (YENOMEM);
-	if (item->dump_status == YENOERR)
-		ys_addc(&ys, 'd');
-	if (item->compress_status == YENOERR)
-		ys_addc(&ys, 'z');
-	if (item->encrypt_status == YENOERR)
-		ys_addc(&ys, 'e');
-	if (item->checksum_status == YENOERR)
-		ys_addc(&ys, 'c');
-	if (item->upload_status == YENOERR)
-		ys_addc(&ys, 'u');
-	if (!(var = yvar_new_string(ys)))
-		return (YENOMEM);
+		if (item->dump_status != YENOERR && item->compress_status != YENOERR &&
+		    item->encrypt_status != YENOERR && item->checksum_status != YENOERR &&
+		    item->upload_status != YENOERR) {
+			// complete failure
+			if (!(var = yvar_new_bool(false)))
+				return (YENOMEM);
+		} else {
+			// incomplete failure
+			ystr_t ys = ys_new("");
+			if (!ys)
+				return (YENOMEM);
+			if (item->dump_status == YENOERR)
+				ys_addc(&ys, 'd');
+			if (item->compress_status == YENOERR)
+				ys_addc(&ys, 'z');
+			if (item->encrypt_status == YENOERR)
+				ys_addc(&ys, 'e');
+			if (item->checksum_status == YENOERR)
+				ys_addc(&ys, 'c');
+			if (item->upload_status == YENOERR)
+				ys_addc(&ys, 'u');
+			if (!(var = yvar_new_string(ys)))
+				return (YENOMEM);
+		}
+	}
 	return (ytable_set_key(items, item->item, var));
 }
 

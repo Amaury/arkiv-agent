@@ -29,6 +29,13 @@ void exec_backup(agent_t *agent);
 	} script_type_t;
 
 	/**
+	 * @function	backup_purge_local
+	 * @abstract	Purge local archive files.
+	 * @param	agent	Pointer to the agent structure.
+	 * @return	YENOERR if everything went fine.
+	 */
+	static ystatus_t backup_purge_local(agent_t *agent);
+	/**
 	 * @function	backup_fetch_param
 	 * @abstract	Fetch and process host backup parameter file.
 	 * @param	agent	Pointer to the agent structure.
