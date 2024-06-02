@@ -63,6 +63,19 @@ macos-arm_64: clean
 	cd src; make agent-macos-arm_64
 
 dist:
+	cp src/arkiv_agent dist/
+	cp var/autoextract.sh dist/
+	if [ ! -f dist/rclone ]; then \
+		wget https://downloads.rclone.org/rclone-current-linux-amd64.zip -O dist/rclone-current-linux-amd64.zip; \
+		cd dist; \
+		unzip rclone-current-linux-amd64.zip; \
+		mv rclone-*/rclone ./; \
+		rm -rf rclone-*; \
+		cd -; \
+	fi
+	makeself dist/ arkiv_agent.run "Arkiv agent installation script" ./autoextract.sh
+
+old_dist:
 	rm -f dist/*
 	tar --transform "s|src/agent|arkiv-agent/agent|" \
 	    -czf dist/arkiv-agent.tgz

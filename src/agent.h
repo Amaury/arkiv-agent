@@ -116,7 +116,7 @@
 
 /* ********** CONFIGURATION VALUES ********** */
 /** @const A_ORG_KEY_LENGTH	 	Size of organization keys (45). */
-#define A_ORG_KEY_LENGTH		4
+#define A_ORG_KEY_LENGTH		45
 /** @const A_MINIMUM_CRYPT_PWD_LENGTH	Minimum size of encryption password. */
 #define A_MINIMUM_CRYPT_PWD_LENGTH	24
 
@@ -159,6 +159,16 @@
 #define A_PARAM_KEY_BUCKET			"bu"
 /** @const A_PARAM_KEY_PATH			Key to a path element. */
 #define A_PARAM_KEY_PATH			"pa"
+/** @const A_PARAM_KEY_HOST			Key to a host element. */
+#define A_PARAM_KEY_HOST			"ho"
+/** @const A_PARAM_KEY_PORT			Key to a port element. */
+#define A_PARAM_KEY_PORT			"po"
+/** @const A_PARAM_KEY_USER			Key to an user element. */
+#define A_PARAM_KEY_USER			"us"
+/** @const A_PARAM_KEY_PWD			Key to a password element. */
+#define A_PARAM_KEY_PWD				"pw"
+/** @const A_PARAM_KEY_KEYFILE			Key to a key file. */
+#define A_PARAM_KEY_KEYFILE			"ke"
 
 /* ********** ENCRYPTION METHOD PARAM CHARACTERS ********** */
 /** @const A_CRYPT_OPENSSL	OpenSSL. */
@@ -271,6 +281,7 @@ typedef enum {
  * @field	bin.z			Path to the compression program.
  * @field	bin.crypt		Path to the encryption program.
  * @field	bin.checksum		Path to the sha512sum.
+ * @field	param.org_name		Organization name.
  * @field	param.encryption	Encryption algorithm.
  * @field	param.compression	Compression algorithm.
  * @field	param.pre_scripts	List of pre-scripts.
@@ -312,6 +323,7 @@ typedef struct agent_s {
 		ystr_t checksum;
 	} bin;
 	struct {
+		ystr_t org_name;
 		encrypt_type_t encryption;
 		compress_type_t compression;
 		retention_type_t retention_type;

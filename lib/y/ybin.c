@@ -197,4 +197,24 @@ ystatus_t ybin_prepend(ybin_t *bin, void *data, size_t bytesize) {
 	bin->buffer_size = buffer_size;
 	return (YENOERR);
 }
+/* Add a '\0' character at the end of a binary, to be able to use it as a string. */
+void ybin_set_nullend(ybin_t *bin) {
+	if (!bin || !bin->data)
+		return;
+	char s[1] = {'\0'};
+	ybin_append(bin, s, 1);
+	bin->bytesize--;
+}
+/* Generates an allocated string from a ybin. */
+char *ybin_to_string(ybin_t *bin) {
+	if (!bin || !bin->data)
+		return (NULL);
+	char *str = malloc0(bin->bytesize + 1);
+	if (!str)
+		return (NULL);
+	if (bin->bytesize)
+		memcpy(str, bin->data, bin->bytesize);
+	str[bin->bytesize] = '\0';
+	return (str);
+}
 

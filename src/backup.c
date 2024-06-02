@@ -121,6 +121,12 @@ static ystatus_t backup_purge_local(agent_t *agent) {
 		ALOG("└ " YANSI_RED "Memory allocation error" YANSI_RESET);
 		return (YENOMEM);
 	}
+	// check if files may be purged
+	if (!yfile_is_dir(agent->conf.archives_path)) {
+		ADEBUG("├ " YANSI_FAINT "No directory " YANSI_RESET "%s", agent->conf.archives_path);
+		ALOG("└ " YANSI_GREEN "Pass" YANSI_RESET);
+		return (YENOERR);
+	}
 	// removes files older than 24 hours
 	ADEBUG("├ " YANSI_FAINT "Delete archives older than 24 hours" YANSI_RESET);
 	yarray_push_multi(
@@ -175,6 +181,13 @@ static ystatus_t backup_fetch_params(agent_t *agent) {
 	}
 	/* extract parameters */
 	yvar_t *var_ptr;
+	// extract organization name
+	var_ptr = yvar_get_from_path(params, A_PARAM_PATH_NAME);
+	agent->param.org_name = yvar_get_string(var_ptr);
+	if (!agent->param.org_name) {
+		ALOG("└ " YANSI_RED "Failed (unable to find organization name)" YANSI_RESET);
+		return (YEBADCONF);
+	}
 	// extract encryption algorithm
 	ADEBUG("├ " YANSI_FAINT "Search for matching encryption method:" YANSI_RESET);
 	var_ptr = yvar_get_from_path(params, A_PARAM_PATH_ENCRYPTION_STRING);

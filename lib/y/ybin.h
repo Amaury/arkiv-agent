@@ -131,6 +131,19 @@ ystatus_t ybin_append(ybin_t *bin, void *data, size_t bytesize);
  * @return	YENOERR if OK.
  */
 ystatus_t ybin_prepend(ybin_t *bin, void *data, size_t bytesize);
+/**
+ * @function	ybin_set_nullend
+ * @abstract	Add a '\0' character at the end of a binary, to be able to use it as a string.
+ * @param	bin	A pointer to a ybin_t.
+ */
+void ybin_set_nullend(ybin_t *bin);
+/**
+ * @function	ybin_to_string
+ * @abstract	Generates an allocated string from a ybin. The enclosed data must be UTF8-compatible.
+ * @param	bin	A pointer to a ybin_t.
+ * @return	An allocated string, or NULL.
+ */
+char *ybin_to_string(ybin_t *bin);
 
 #if defined(__cplusplus) || defined(c_plusplus)
 }

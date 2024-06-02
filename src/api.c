@@ -20,7 +20,9 @@
 
 /* ********** PUBLIC FUNCTIONS ********** */
 /* Declare the current server to arkiv.sh. */
-ystatus_t api_server_declare(const char *hostname, const char *orgKey) {
+ystatus_t api_server_declare(agent_t *agent) {
+	char *hostname = agent->conf.hostname;
+	char *orgKey = agent->conf.org_key;
 	ystatus_t st = YENOMEM;
 	ystr_t agentVersion = NULL;
 	yvar_t *var = NULL;
@@ -31,6 +33,8 @@ ystatus_t api_server_declare(const char *hostname, const char *orgKey) {
 	ys_printf(&agentVersion, "%f", A_AGENT_VERSION);
 	ytable_set_key(params, "version", agentVersion);
 	// API call
+	if (agent->debug_mode)
+		printf("URL called: %s\n", A_API_URL_SERVER_DECLARE);
 	yres_pointer_t res = api_call(A_API_URL_SERVER_DECLARE, hostname, orgKey, params, NULL, true);
 	st = YRES_STATUS(res);
 	var = (yvar_t*)YRES_VAL(res);
@@ -163,41 +167,37 @@ ystatus_t api_backup_report(agent_t *agent) {
 	}
 	if ((st = ytable_set_key(root, "st_global", var)) != YENOERR)
 		goto cleanup;
-	if (!(var = yvar_new_bool(st_pre))) {
-		st = YENOMEM;
-		goto cleanup;
-	}
 	if (!ytable_empty(agent->exec_log.pre_scripts)) {
+		if (!(var = yvar_new_bool(st_pre))) {
+			st = YENOMEM;
+			goto cleanup;
+		}
 		if ((st = ytable_set_key(root, "st_pre", var)) != YENOERR)
 			goto cleanup;
+	}
+	if (!ytable_empty(agent->exec_log.post_scripts)) {
 		if (!(var = yvar_new_bool(st_post))) {
 			st = YENOMEM;
 			goto cleanup;
 		}
-	}
-	if (!ytable_empty(agent->exec_log.post_scripts)) {
 		if ((st = ytable_set_key(root, "st_post", var)) != YENOERR)
 			goto cleanup;
-		if (!(var = yvar_new_bool(st_files))) {
-			st = YENOMEM;
-			goto cleanup;
-		}
 	}
 	if (!ytable_empty(agent->exec_log.backup_files)) {
-		if ((st = ytable_set_key(root, "st_files", var)) != YENOERR)
-			goto cleanup;
 		if (!(var = yvar_new_bool(st_files))) {
 			st = YENOMEM;
 			goto cleanup;
 		}
+		if ((st = ytable_set_key(root, "st_files", var)) != YENOERR)
+			goto cleanup;
 	}
 	if (!ytable_empty(agent->exec_log.backup_databases)) {
-		if ((st = ytable_set_key(root, "st_db", var)) != YENOERR)
-			goto cleanup;
 		if (!(var = yvar_new_bool(st_db))) {
 			st = YENOMEM;
 			goto cleanup;
 		}
+		if ((st = ytable_set_key(root, "st_db", var)) != YENOERR)
+			goto cleanup;
 	}
 	// API call
 	if (agent->debug_mode) {
@@ -301,6 +301,7 @@ static yres_pointer_t api_call(const char *url, const char *user, const char *pw
 			result = YRESULT_ERR(yres_pointer_t, YENOMEM);
 			goto cleanup;
 		}
+		ybin_set_nullend(&responseBin);
 		responseVar = yjson_parse_simple(jsonParser, (char*)responseBin.data);
 		if (responseVar) {
 			result = YRESULT_VAL(yres_pointer_t, responseVar);

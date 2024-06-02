@@ -12,18 +12,10 @@
 /**
  * @function	api_server_declare
  * @abstract	Declare the current server to arkiv.sh.
- * @param	hostname	Server name.
- * @param	orgKey		Organization key.
+ * @param	agent	Pointer to the agent structure.
  * @return	YENOERR if the declaration went well.
  */
-ystatus_t api_server_declare(const char *hostname, const char *orgKey);
-/**
- * @function	api_get_params_file
- * @abstract	Fetch a host's parameters file.
- * @param	agent	Pointer to the agent structure.
- * @return	The deserialized JSON content, or NULL if an error occurred.
- */
-yvar_t *api_get_params_file(agent_t *agent);
+ystatus_t api_server_declare(agent_t *agent);
 /**
  * @function	api_backup_report
  * @abstract	Send the report of a backup.
@@ -31,6 +23,13 @@ yvar_t *api_get_params_file(agent_t *agent);
  * @return	YENOERR if the report was sent successfully.
  */
 ystatus_t api_backup_report(agent_t *agent);
+/**
+ * @function	api_get_params_file
+ * @abstract	Fetch a host's parameters file.
+ * @param	agent	Pointer to the agent structure.
+ * @return	The deserialized JSON content, or NULL if an error occurred.
+ */
+yvar_t *api_get_params_file(agent_t *agent);
 
 /* ********** PRIVATE DECLARATIONS ********** */
 #ifdef __A_API_PRIVATE__

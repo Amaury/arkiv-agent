@@ -71,11 +71,13 @@ yres_var_t yjson_parse(yjson_parser_t *json, char *input) {
 	// check status
 	if (json->status != YENOERR)
 		return (YRESULT_ERR(yres_var_t, json->status));
+	/*
 	if (json->status == YENOERR && *json->ptr != '\0') {
 		yvar_delete(&res.value);
 		yvar_init_undef(&res.value);
 		return (YRESULT_ERR(yres_var_t, (json->status = YESYNTAX)));
 	}
+	*/
 	// no error
 	res.status = YENOERR;
 	return (res);
@@ -525,7 +527,7 @@ static void _yjson_parse_object(yjson_parser_t *json, yvar_t *value) {
 		yvar_t val = _yjson_parse_chunk(json);
 		if (json->status != YENOERR)
 			goto error;
-		yvar_t *pval = yvar_clone(&val);
+		yvar_t *pval = yvar_clone_copy(&val);
 		if (!pval) {
 			json->status = YENOMEM;
 			goto error;
