@@ -56,7 +56,7 @@ int main(int argc, char *argv[]) {
 		_agent_usage(agent->agent_path);
 	} else if (exec_type == A_TYPE_VERSION) {
 		// version
-		printf("%f\n", A_AGENT_VERSION);
+		printf("%.01f\n", A_AGENT_VERSION);
 	} else if (exec_type == A_TYPE_CONFIG) {
 		// configuration
 		exec_configuration(agent);

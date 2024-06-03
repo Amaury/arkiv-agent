@@ -3,6 +3,8 @@
 help:
 	@echo "$$(tput bold)General$$(tput sgr0)"
 	@echo "make clean            $$(tput dim)Delete all compiled files.$$(tput sgr0)"
+	@echo "make dist             $$(tput dim)Create the distribution files (compilation must have been done).$$(tput sgr0)"
+	@echo "make distclean        $$(tput dim)Delete created distribution files.$$(tput sgr0)"
 	@echo
 	@echo "$$(tput bold)Dynamic linking$$(tput sgr0)"
 	@echo "make lib              $$(tput dim)Compile libraries.$$(tput sgr0)"
