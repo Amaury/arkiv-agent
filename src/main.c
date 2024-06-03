@@ -27,6 +27,7 @@ void _agent_usage(const char *progname);
 
 typedef enum {
 	A_TYPE_USAGE = 0,
+	A_TYPE_VERSION,
 	A_TYPE_CONFIG,
 	A_TYPE_DECLARE,
 	A_TYPE_BACKUP,
@@ -42,6 +43,7 @@ int main(int argc, char *argv[]) {
 
 	// check command-line arguments
 	exec_type_t exec_type = (
+		(argc == 2 && !strcmp(argv[1], A_OPT_VERSION)) ? A_TYPE_VERSION :
 		(argc == 2 && !strcmp(argv[1], A_OPT_CONFIG)) ? A_TYPE_CONFIG :
 		(argc == 2 && !strcmp(argv[1], A_OPT_DECLARE)) ? A_TYPE_DECLARE :
 		(argc == 2 && !strcmp(argv[1], A_OPT_BACKUP)) ? A_TYPE_BACKUP :
@@ -52,6 +54,9 @@ int main(int argc, char *argv[]) {
 	if (exec_type == A_TYPE_USAGE) {
 		// usage
 		_agent_usage(agent->agent_path);
+	} else if (exec_type == A_TYPE_VERSION) {
+		// version
+		printf("%f\n", A_AGENT_VERSION);
 	} else if (exec_type == A_TYPE_CONFIG) {
 		// configuration
 		exec_configuration(agent);
@@ -85,96 +90,6 @@ int main(int argc, char *argv[]) {
 	agent_free(agent);
 	return (0);
 }
-
-#if 0
-	ystatus_t status = YENOERR;
-	int exit_value = 0;
-	agent_t *agent = NULL;
-
-	// display usage and quit if needed
-	if (argc == 1 || argc > 2 ||
-	    (strcasecmp(argv[1], "config") && strcasecmp(argv[1], "exec"))) {
-		_agent_usage(argv[0]);
-		exit(1);
-	}
-	ytry {
-		// agent creation
-		agent = _agent_new();
-		// check if debug option was activated
-		init_check_debug(agent, argc, argv);
-		// check the current user
-		if ((status = check_root_user()) != YENOERR)
-			goto error;
-		// get execution mode
-		if (argc > 1) {
-			if (!strcmp(argv[1], "install")) {
-				// install mode
-				return (install(argv[0]));
-			} else if (strcmp(argv[1], "backup")) {
-				// bad parameter
-				fprintf(stderr, "Bad parameter.");
-				exit(2);
-			}
-		}
-		// initialize log
-		init_log(agent);
-		// *** startup
-		ALOG_RAW(YANSI_NEGATIVE "---------------------------" YANSI_RESET);
-		{
-			ALOG(YANSI_BOLD "Start" YANSI_RESET);
-			// read the local configuration
-			if (init_read_conf(agent, argc, argv) != YENOERR)
-				goto error;
-			// get distant parameters for this machine
-			if (init_fetch_params(agent) != YENOERR)
-				goto error;
-			// check if encryption is mandatory but impossible to do
-			if (init_check_mandatory_encryption(agent) != YENOERR)
-				goto error;
-			// create output directory
-			if (init_create_output_directory(agent) != YENOERR)
-				goto error;
-			ALOG("└ " YANSI_GREEN "Done" YANSI_RESET);
-		}
-		// ** check if there is something to backup
-		if ((!agent->path || !yarray_len(agent->path)) &&
-		    !agent->mysqldump.all_db &&
-		    (!agent->mysqldump.db || !yarray_len(agent->mysqldump.db))) {
-			ALOG(YANSI_BOLD "Nothing to backup" YANSI_RESET);
-			goto cleanup;
-		}
-		// *** files backup
-		if ((status = backup_files(agent)) != YENOERR)
-			agent->log.status = AERROR_OVERRIDE(agent->log.status, status);
-		// *** MySQL dump backup
-		if ((status = backup_database_mysqldump(agent)) != YENOERR)
-			goto error;
-		// *** Xtrabackup
-		if ((status = backup_database_xtrabackup(agent)) != YENOERR)
-			goto error;
-		// *** PostgreSQL dump backup
-		if ((status = backup_database_pgdump(agent)) != YENOERR)
-			goto error;
-		// compute sha256sum
-		if ((status = sha256sum_create(agent)) != YENOERR)
-			goto error;
-		// upload files onto Amazon S3
-		upload_aws_s3(agent);
-		// send log to Arkiv.sh server
-	} ycatch("YEXCEPT_NOMEM") {
-		YLOG_ADD(YLOG_ERR, "Memory allocation error.");
-		goto error;
-	} yfinalize;
-	goto cleanup;
-error:
-	exit_value = 3;
-cleanup:
-	YLOG_ADD(YLOG_NOTE, "End of processing.");
-	_agent_free(agent);
-	YLOG_END();
-	return (exit_value);
-}
-#endif
 
 /* ********** PRIVATE FUNCTIONS ********** */
 /**
@@ -219,6 +134,8 @@ void _agent_usage(const char *progname) {
 		YANSI_BG_GRAY YANSI_WHITE " Execution mode " YANSI_RESET "\n\n"
 		YANSI_YELLOW "  help\n" YANSI_RESET
 		"  Display this help. Same effect if the mode is not specified.\n\n"
+		YANSI_YELLOW "  version\n" YANSI_RESET
+		"  Display the version number of the installed agent.\n\n"
 		YANSI_YELLOW "  config\n" YANSI_RESET
 		"  Ask questions in order to create the Arkiv configuration file, then declare\n"
 		"  the local machine up to the Arkiv.sh service.\n\n"

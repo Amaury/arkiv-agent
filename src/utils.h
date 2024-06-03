@@ -33,7 +33,7 @@ ystr_t get_program_path(const char *bin_name);
  */
 void check_tar(void);
 /**
- * @function	check_sh256sum
+ * @function	check_sha512sum
  * @abstract	Checks if the sha512sum program is installed. Aborts if not.
  */
 void check_sha512sum(void);

@@ -1,4 +1,4 @@
-.PHONY: help all clean arkiv-agent lib src linux-x86_32 linux-x86_64 linux-arm_32 linux-arm_64 linux-riscv_64 macos-x86_64 macos-arm_64 dist
+.PHONY: help all clean arkiv-agent lib src linux-x86_32 linux-x86_64 linux-arm_32 linux-arm_64 linux-riscv_64 macos-x86_64 macos-arm_64 dist distclean
 
 help:
 	@echo "$$(tput bold)General$$(tput sgr0)"
@@ -65,26 +65,22 @@ macos-arm_64: clean
 dist:
 	cp src/arkiv_agent dist/
 	cp var/autoextract.sh dist/
-	if [ ! -f dist/rclone ]; then \
-		wget https://downloads.rclone.org/rclone-current-linux-amd64.zip -O dist/rclone-current-linux-amd64.zip; \
-		cd dist; \
+	if [ ! -f var/rclone ]; then \
+		wget https://downloads.rclone.org/rclone-current-linux-amd64.zip -O var/rclone-current-linux-amd64.zip; \
+		cd var; \
 		unzip rclone-current-linux-amd64.zip; \
 		mv rclone-*/rclone ./; \
 		rm -rf rclone-*; \
 		cd -; \
 	fi
-	makeself dist/ arkiv_agent.run "Arkiv agent installation script" ./autoextract.sh
+	cp var/rclone dist/
+	makeself --tar-extra "--exclude=.gitignore" dist/ arkiv_agent.run "Arkiv agent installation script" ./autoextract.sh
+	rm dist/*
+	mv arkiv_agent.run dist/
+	cd dist; md5sum arkiv_agent.run > arkiv_agent.run.md5
+	cd dist; sha512sum arkiv_agent.run > arkiv_agent.run.sha512
 
-old_dist:
-	rm -f dist/*
-	tar --transform "s|src/agent|arkiv-agent/agent|" \
-	    -czf dist/arkiv-agent.tgz
-	cd dist; md5sum arkiv-agent.tgz > arkiv-agent.md5
-	cd dist; sha256sum arkiv-agent.tgz > arkiv-agent.sha256sum
-
-dummy:
-	rm -rf dist/*
-	cp src/agent dist/
-	mkdir dist/lib
-	cp lib/*.so dist/lib/
+distclean:
+	rm dist/*
+	rm -rf var/rclone*
 

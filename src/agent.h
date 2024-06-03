@@ -19,6 +19,8 @@
 #define A_AGENT_VERSION	1.0
 
 /* ********** COMMAND-LINE OPTIONS ********** */
+/** @const A_OPT_VERSION	CLI option for version number display. */
+#define A_OPT_VERSION		"version"
 /** @const A_OPT_CONFIG		CLI option for configuration. */
 #define	A_OPT_CONFIG		"config"
 /** @const A_OPT_DECLARE	CLI option for declaration. */
