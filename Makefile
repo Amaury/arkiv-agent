@@ -5,6 +5,7 @@ help:
 	@echo "make clean            $$(tput dim)Delete all compiled files.$$(tput sgr0)"
 	@echo "make dist             $$(tput dim)Create the distribution files (compilation must have been done).$$(tput sgr0)"
 	@echo "make distclean        $$(tput dim)Delete created distribution files.$$(tput sgr0)"
+	@echo "make distallclean     $$(tput dim)Delete created distribution files and downloaded rclone copies.$$(tput sgr0)"
 	@echo
 	@echo "$$(tput bold)Dynamic linking$$(tput sgr0)"
 	@echo "make lib              $$(tput dim)Compile libraries.$$(tput sgr0)"
@@ -16,7 +17,6 @@ help:
 	@echo "make linux-x86_64     $$(tput dim)Compile for Linux on x86_64.$$(tput sgr0)"
 	@echo "make linux-arm_32     $$(tput dim)Compile for Linux on ARM 32.$$(tput sgr0)"
 	@echo "make linux-arm_64     $$(tput dim)Compile for Linux on ARM 64.$$(tput sgr0)"
-	@echo "make linux-riscv_64   $$(tput dim)Compile for Linux on RISC-V 64.$$(tput sgr0)"
 	@echo "make macos-x86_64     $$(tput dim)Compile for MacOS on x86_64.$$(tput sgr0)"
 	@echo "make macos-arm_64     $$(tput dim)Compile for MacOS on ARM 64.$$(tput sgr0)"
 
@@ -38,51 +38,139 @@ src:
 
 linux-x86_32: clean
 	cd lib; make linux-x86_32
-	cd src; make agent-linux-i386
+	cd src; make linux-i386
 
 linux-x86_64: clean
 	cd lib; make linux-x86_64
-	cd src; make agent-linux-x86_64
+	cd src; make linux-x86_64
 
 linux-arm_32: clean
 	cd lib; make linux-arm_32
-	cd src; make agent-linux-arm_32
+	cd src; make linux-arm_32
 
 linux-arm_64: clean
 	cd lib; make linux-arm_64
-	cd src; make agent-linux-arm_64
-
-linux-riscv_64: clean
-	cd lib; make linux-riscv_64
-	cd src; make agent-linux-riscv_64
+	cd src; make linux-arm_64
 
 macos-x86_64: clean
 	cd lib; make macos-x86_64
-	cd src; make agent-macos-x86_64
+	cd src; make macos-x86_64
 
 macos-arm_64: clean
 	cd lib; make macos-arm_64
-	cd src; make agent-macos-arm_64
+	cd src; make macos-arm_64
 
-dist:
-	cp src/arkiv_agent dist/
+dist-linux-x86_32: distclean linux-x86_32
+	cp src/arkiv_agent-linux-x86_32 dist/arkiv_agent
 	cp var/autoextract.sh dist/
-	if [ ! -f var/rclone ]; then \
-		wget https://downloads.rclone.org/rclone-current-linux-amd64.zip -O var/rclone-current-linux-amd64.zip; \
+	if [ ! -f var/rclone_linux-386 ]; then \
+		wget https://downloads.rclone.org/rclone-current-linux-386.zip -O var/rclone-current-linux-386.zip; \
 		cd var; \
-		unzip rclone-current-linux-amd64.zip; \
-		mv rclone-*/rclone ./; \
+		unzip rclone-current-linux-386.zip; \
+		mv rclone-*/rclone ./rclone_linux-386; \
 		rm -rf rclone-*; \
 		cd -; \
 	fi
-	cp var/rclone dist/
-	makeself --tar-extra "--exclude=.gitignore" dist/ arkiv_agent.run "Arkiv agent installation script" ./autoextract.sh
+	cp var/rclone_linux-386 dist/rclone
+	makeself --tar-extra "--exclude=.gitignore" dist/ arkiv_agent-linux-x86_32.run "Arkiv agent installation script" ./autoextract.sh
 	rm dist/*
-	mv arkiv_agent.run dist/
-	cd dist; md5sum arkiv_agent.run > arkiv_agent.run.md5
-	cd dist; sha512sum arkiv_agent.run > arkiv_agent.run.sha512
+	mv arkiv_agent-linux-x86_32.run dist/
+	cd dist; md5sum arkiv_agent-linux-x86_32.run > arkiv_agent-linux-x86_32.run.md5
+	cd dist; sha512sum arkiv_agent-linux-x86_32.run > arkiv_agent-linux-x86_32.run.sha512
+
+dist-linux-x86_64: distclean linux-x86_64
+	cp src/arkiv_agent-linux-x86_64 dist/arkiv_agent
+	cp var/autoextract.sh dist/
+	if [ ! -f var/rclone_linux-amd64 ]; then \
+		wget https://downloads.rclone.org/rclone-current-linux-amd64.zip -O var/rclone-current-linux-amd64.zip; \
+		cd var; \
+		unzip rclone-current-linux-amd64.zip; \
+		mv rclone-*/rclone ./rclone_linux-amd64; \
+		rm -rf rclone-*; \
+		cd -; \
+	fi
+	cp var/rclone_linux-amd64 dist/rclone
+	makeself --tar-extra "--exclude=.gitignore" dist/ arkiv_agent-linux-x86_64.run "Arkiv agent installation script" ./autoextract.sh
+	rm dist/*
+	mv arkiv_agent-linux-x86_64.run dist/
+	cd dist; md5sum arkiv_agent-linux-x86_64.run > arkiv_agent-linux-x86_64.run.md5
+	cd dist; sha512sum arkiv_agent-linux-x86_64.run > arkiv_agent-linux-x86_64.run.sha512
+
+dist-linux-arm_32: distclean linux-arm_32
+	cp src/arkiv_agent-linux-arm_32 dist/arkiv_agent
+	cp var/autoextract.sh dist/
+	if [ ! -f var/rclone_linux-arm-v7 ]; then \
+		wget https://downloads.rclone.org/rclone-current-linux-arm-v7.zip -O var/rclone-current-linux-arm-v7.zip; \
+		cd var; \
+		unzip rclone-current-linux-arm-v7.zip; \
+		mv rclone-*/rclone ./rclone_linux-arm-v7; \
+		rm -rf rclone-*; \
+		cd -; \
+	fi
+	cp var/rclone_linux-arm-v7 dist/rclone
+	makeself --tar-extra "--exclude=.gitignore" dist/ arkiv_agent-linux-arm_32.run "Arkiv agent installation script" ./autoextract.sh
+	rm dist/*
+	mv arkiv_agent-linux-arm_32.run dist/
+	cd dist; md5sum arkiv_agent-linux-arm_32.run > arkiv_agent-linux-arm_32.run.md5
+	cd dist; sha512sum arkiv_agent-linux-arm_32.run > arkiv_agent-linux-arm_32.run.sha512
+
+dist-linux-arm_64: distclean linux-arm_64
+	cp src/arkiv_agent-linux-arm_64 dist/arkiv_agent
+	cp var/autoextract.sh dist/
+	if [ ! -f var/rclone_linux-arm64 ]; then \
+		wget https://downloads.rclone.org/rclone-current-linux-arm64.zip -O var/rclone-current-linux-arm64.zip; \
+		cd var; \
+		unzip rclone-current-linux-arm64.zip; \
+		mv rclone-*/rclone ./rclone_linux-arm64; \
+		rm -rf rclone-*; \
+		cd -; \
+	fi
+	cp var/rclone_linux-arm64 dist/rclone
+	makeself --tar-extra "--exclude=.gitignore" dist/ arkiv_agent-linux-arm_64.run "Arkiv agent installation script" ./autoextract.sh
+	rm dist/*
+	mv arkiv_agent-linux-arm_64.run dist/
+	cd dist; md5sum arkiv_agent-linux-arm_64.run > arkiv_agent-linux-arm_64.run.md5
+	cd dist; sha512sum arkiv_agent-linux-arm_64.run > arkiv_agent-linux-arm_64.run.sha512
+
+dist-macos-x86_64: distclean macos-x86_64
+	cp src/arkiv_agent-macos-x86_64 dist/arkiv_agent
+	cp var/autoextract.sh dist/
+	if [ ! -f var/rclone_osx-amd64 ]; then \
+		wget https://downloads.rclone.org/rclone-current-osx-amd64.zip -O var/rclone-current-osx-amd64.zip; \
+		cd var; \
+		unzip rclone-current-osx-amd64.zip; \
+		mv rclone-*/rclone ./rclone_osx-amd64; \
+		rm -rf rclone-*; \
+		cd -; \
+	fi
+	cp var/rclone_osx-amd64 dist/rclone
+	makeself --tar-extra "--exclude=.gitignore" dist/ arkiv_agent-macos-x86_64.run "Arkiv agent installation script" ./autoextract.sh
+	rm dist/*
+	mv arkiv_agent-macos-x86_64.run dist/
+	cd dist; md5sum arkiv_agent-macos-x86_64.run > arkiv_agent-macos-x86_64.run.md5
+	cd dist; sha512sum arkiv_agent-macos-x86_64.run > arkiv_agent-macos-x86_64.run.sha512
+
+dist-macos-arm_64: distclean macos-arm_64
+	cp src/arkiv_agent-macos-arm_64 dist/arkiv_agent
+	cp var/autoextract.sh dist/
+	if [ ! -f var/rclone_osx-arm64 ]; then \
+		wget https://downloads.rclone.org/rclone-current-osx-arm64.zip -O var/rclone-current-osx-arm64.zip; \
+		cd var; \
+		unzip rclone-current-osx-arm64.zip; \
+		mv rclone-*/rclone ./rclone_osx-arm64; \
+		rm -rf rclone-*; \
+		cd -; \
+	fi
+	cp var/rclone_osx-arm64 dist/rclone
+	makeself --tar-extra "--exclude=.gitignore" dist/ arkiv_agent-macos-arm_64.run "Arkiv agent installation script" ./autoextract.sh
+	rm dist/*
+	mv arkiv_agent-macos-arm_64.run dist/
+	cd dist; md5sum arkiv_agent-macos-arm_64.run > arkiv_agent-macos-arm_64.run.md5
+	cd dist; sha512sum arkiv_agent-macos-arm_64.run > arkiv_agent-macos-arm_64.run.sha512
 
 distclean:
-	rm dist/*
+	rm -f dist/*
+
+distallclean: distclean
 	rm -rf var/rclone*
 

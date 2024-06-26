@@ -92,39 +92,12 @@ LDFLAGS	= -shared -Wl,-soname,$(SONAME)
 
 # #####################################################################
 
-.PHONY: clean all linux-x86_32 linux-x86_64 linux-arm_32 linux-arm_64 linux-riscv_64 macos-x86_64 macos-arm_64
+.PHONY: clean all linux-x86_32 linux-x86_64 linux-arm_32 linux-arm_64 macos-x86_64 macos-arm_64
 
+# dynamic compilation on local architeccture
 $(NAME): $(OBJS) $(SRC)
 	ar -r $(NAME) $(OBJS)
 	ranlib $(NAME)
-
-linux-x86_32: CC=$(CC_LINUX_X86_32)
-
-linux-x86_32: clean $(NAME)
-
-linux-x86_64: CC=$(CC_LINUX_X86_64)
-
-linux-x86_64: clean $(NAME)
-
-linux-arm_32: CC=$(CC_LINUX_ARM_32)
-
-linux-arm_32: clean $(NAME)
-
-linux-arm_64: CC=$(CC_LINUX_ARM_64)
-
-linux-arm_64: clean $(NAME)
-
-linux-riscv_64: CC=$(CC_LINUX_RISCV_64)
-
-linux-riscv_64: clean $(NAME)
-
-macos-x86_64: CC=$(CC_MACOS_X86_64)
-
-macos-x86_64: clean $(NAME)
-
-macos-arm_64: CC=$(CC_MACOS_ARM_64)
-
-macos-arm_64: clean $(NAME)
 
 $(SONAME): $(OBJS) $(SRC)
 	$(CC) $(OBJS) $(LDFLAGS) -o $(SONAME)
@@ -134,6 +107,37 @@ clean:
 
 all: clean $(NAME)
 
+# objects compilation for i386
+linux-x86_32: CC=$(CC_LINUX_X86_32)
+
+linux-x86_32: clean $(OBJS)
+
+# objects compilation for x86_64
+linux-x86_64: CC=$(CC_LINUX_X86_64)
+
+linux-x86_64: clean $(OBJS)
+
+# objects compilation for ARM 32
+linux-arm_32: CC=$(CC_LINUX_ARM_32)
+
+linux-arm_32: clean $(OBJS)
+
+# objects compilation for ARM 64
+linux-arm_64: CC=$(CC_LINUX_ARM_64)
+
+linux-arm_64: clean $(OBJS)
+
+# objects compilation for MAcOS x86_64
+macos-x86_64: CC=$(CC_MACOS_X86_64)
+
+macos-x86_64: clean $(OBJS)
+
+# objects compilation for MacOS ARM 64
+macos-arm_64: CC=$(CC_MACOS_ARM_64)
+
+macos-arm_64: clean $(OBJS)
+
+# basic object compilation
 .c.o:
 	$(CC) $(CFLAGS) -c $<
 
