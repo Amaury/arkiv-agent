@@ -13,6 +13,7 @@ help:
 	@echo "make all              $$(tput dim)Delete files and compile libraries and agent.$$(tput sgr0)"
 	@echo
 	@echo "$$(tput bold)Static linking$$(tput sgr0)"
+	@if ! type zig > /dev/null 2>&1; then echo "$$(tput setab 1)Add to your \$$PATH environment variable the path to the zig compiler's directory.$$(tput sgr0)"; fi
 	@echo "make linux-x86_32     $$(tput dim)Compile for Linux on x86_32.$$(tput sgr0)"
 	@echo "make linux-x86_64     $$(tput dim)Compile for Linux on x86_64.$$(tput sgr0)"
 	@echo "make linux-arm_32     $$(tput dim)Compile for Linux on ARM 32.$$(tput sgr0)"

@@ -121,8 +121,12 @@
 #define A_ORG_KEY_LENGTH		45
 /** @const A_MINIMUM_CRYPT_PWD_LENGTH	Minimum size of encryption password. */
 #define A_MINIMUM_CRYPT_PWD_LENGTH	24
+/** @const A_DEFAULT_LOCAL_RETENTION	Default value for the local retention duration in hours. */
+#define A_DEFAULT_LOCAL_RETENTION	24
 
 /* ********** PARAMETERS FILE VARPATH ********** */
+/** @const A_PARAM_PATH_RETENTION_HOURS		Path to the local retention duration in hours. */
+#define A_PARAM_PATH_RETENTION_HOURS		"/r"
 /** @const A_PARAM_PATH_ENCRYPTION_STRING	Path to the encryption string parameter. */
 #define A_PARAM_PATH_ENCRYPTION_STRING		"/e"
 /** @const A_PARAM_PATH_COMPRESSION_STRING	Path to the compression string parameter. */
@@ -328,6 +332,7 @@ typedef struct agent_s {
 		ystr_t org_name;
 		encrypt_type_t encryption;
 		compress_type_t compression;
+		uint16_t local_retention_hours;
 		retention_type_t retention_type;
 		uint8_t retention_duration;
 		uint64_t savepack_id;

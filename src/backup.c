@@ -115,6 +115,7 @@ void exec_backup(agent_t *agent) {
 static ystatus_t backup_purge_local(agent_t *agent) {
 	ystatus_t status = YENOERR;
 	yarray_t args = NULL;
+	ystr_t ys = NULL;
 
 	ALOG("Purge local archives");
 	if (!(args = yarray_create(6))) {
@@ -128,15 +129,16 @@ static ystatus_t backup_purge_local(agent_t *agent) {
 		return (YENOERR);
 	}
 	// removes files older than 24 hours
-	ADEBUG("├ " YANSI_FAINT "Delete archives older than 24 hours" YANSI_RESET);
+	ys = ys_printf(NULL, "+%d", (agent->param.local_retention_hours * 60));
+	ADEBUG("├ " YANSI_FAINT "Delete archives older than %d hours" YANSI_RESET, agent->param.local_retention_hours);
 	yarray_push_multi(
 		&args,
 		6,
 		agent->conf.archives_path,
 		"-type",
 		"f",
-		"-mtime",
-		"+1",
+		"-mmin",
+		ys,
 		"-delete"
 	);
 	status = yexec(agent->bin.find, args, NULL, NULL, NULL);
@@ -167,6 +169,7 @@ static ystatus_t backup_purge_local(agent_t *agent) {
 	}
 	ALOG("└ " YANSI_GREEN "Done" YANSI_RESET);
 cleanup:
+	ys_free(ys);
 	yarray_free(args);
 	return (status);
 }
@@ -256,6 +259,18 @@ static ystatus_t backup_fetch_params(agent_t *agent) {
 			break;
 		}
 	}
+	// extract local retention
+	var_ptr = yvar_get_from_path(params, A_PARAM_PATH_RETENTION_HOURS);
+	ystr_t retention_string = yvar_get_string(var_ptr);
+	int retention_int = 0;
+	if (retention_string && ys_is_numeric(retention_string)) {
+		retention_int = atoi(retention_string);
+	}
+	if (retention_int <= 0 || retention_int > UINT16_MAX) {
+		ALOG("├ " YANSI_YELLOW "No local retention duration value. Use default value (%d days)." YANSI_RESET, A_DEFAULT_LOCAL_RETENTION);
+		agent->param.local_retention_hours = A_DEFAULT_LOCAL_RETENTION;
+	} else
+		agent->param.local_retention_hours = (uint8_t)retention_int;
 
 	// extract schedules
 	var_ptr = yvar_get_from_path(params, A_PARAM_PATH_SCHEDULES);
