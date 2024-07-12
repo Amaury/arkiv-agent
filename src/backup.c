@@ -23,29 +23,44 @@ void exec_backup(agent_t *agent) {
 
 	ALOG_RAW(YANSI_NEGATIVE "------------------------- AGENT EXECUTION -------------------------" YANSI_RESET);
 	/* local programs */
-	ALOG("Search local programs");
 	// get find path
 	if (!(agent->bin.find = get_program_path("find"))) {
+		ALOG("Search local programs");
 		ALOG("└ " YANSI_RED "Unable to find " YANSI_RESET "find" YANSI_RED " program" YANSI_RESET);
 		ALOG(YANSI_RED "Abort" YANSI_RESET);
 		return;
 	}
 	// get tar path
 	if (!(agent->bin.tar = get_program_path("tar"))) {
+		ALOG("Search local programs");
 		ALOG("└ " YANSI_RED "Unable to find " YANSI_RESET "tar" YANSI_RED " program" YANSI_RESET);
 		ALOG(YANSI_RED "Abort" YANSI_RESET);
 		return;
 	}
 	// get sh512sum path
 	if (!(agent->bin.checksum = get_program_path("sha512sum"))) {
+		ALOG("Search local programs");
 		ALOG("└ " YANSI_RED "Unable to find " YANSI_RESET "sha512sum" YANSI_RED " program" YANSI_RESET);
 		ALOG(YANSI_RED "Abort" YANSI_RESET);
 		return;
 	}
+	// get database dump programs path
+	agent->bin.mysqldump = get_program_path("mysqldump");
+	agent->bin.pg_dump = get_program_path("pg_dump");
 	// check rclone
 	if (!yfile_is_executable(A_EXE_RCLONE)) {
+		ALOG("Search local programs");
 		ALOG("└ " YANSI_RED "Unable to find " YANSI_RESET A_EXE_RCLONE YANSI_RED " program" YANSI_RESET);
 		ALOG(YANSI_RED "Abort" YANSI_RESET);
+		return;
+	}
+	ADEBUG("Search local programs");
+	ADEBUG("└ " YANSI_GREEN "Done" YANSI_RESET);
+
+	// fetch parameters file
+	st = backup_fetch_params(agent);
+	if (st != YENOERR && st != YEAGAIN) {
+		ALOG(YANSI_BG_RED "Abort" YANSI_RESET);
 		return;
 	}
 	ALOG("└ " YANSI_GREEN "Done" YANSI_RESET);
@@ -56,17 +71,13 @@ void exec_backup(agent_t *agent) {
 		ALOG(YANSI_BG_RED "Abort" YANSI_RESET);
 		return;
 	}
-
-	// fetch parameters file
-	ALOG("Start backup");
-	st = backup_fetch_params(agent);
+	// quit if there is nothing to backup
 	if (st == YEAGAIN) {
 		ALOG(YANSI_GREEN "✓ End of processing" YANSI_RESET);
 		return;
-	} else if (st != YENOERR) {
-		ALOG(YANSI_BG_RED "Abort" YANSI_RESET);
-		return;
 	}
+
+	ALOG("Start backup");
 	// create output directory
 	if (backup_create_output_directory(agent) != YENOERR) {
 		ALOG(YANSI_BG_RED "Abort" YANSI_RESET);
@@ -83,7 +94,7 @@ void exec_backup(agent_t *agent) {
 		// backup files
 		backup_files(agent);
 		// backup databases
-		//backup_databases(agent);
+		backup_databases(agent);
 		// encrypt files
 		backup_encrypt_files(agent);
 		// compute checksums
@@ -175,7 +186,7 @@ cleanup:
 }
 /* Fetch and process host backup parameter file. */
 static ystatus_t backup_fetch_params(agent_t *agent) {
-	ALOG("├ " YANSI_FAINT "Fetch host parameters" YANSI_RESET);
+	ALOG("Fetch host parameters");
 	// fetch params file
 	yvar_t *params = api_get_params_file(agent);
 	if (!params) {
@@ -261,16 +272,12 @@ static ystatus_t backup_fetch_params(agent_t *agent) {
 	}
 	// extract local retention
 	var_ptr = yvar_get_from_path(params, A_PARAM_PATH_RETENTION_HOURS);
-	ystr_t retention_string = yvar_get_string(var_ptr);
-	int retention_int = 0;
-	if (retention_string && ys_is_numeric(retention_string)) {
-		retention_int = atoi(retention_string);
-	}
-	if (retention_int <= 0 || retention_int > UINT16_MAX) {
-		ALOG("├ " YANSI_YELLOW "No local retention duration value. Use default value (%d days)." YANSI_RESET, A_DEFAULT_LOCAL_RETENTION);
+	int64_t retention_int = yvar_get_int(var_ptr);
+	if (!var_ptr || retention_int <= 0 || retention_int > UINT16_MAX) {
+		ALOG("├ " YANSI_YELLOW "No local retention duration value. Use default value (%d hours)." YANSI_RESET, A_DEFAULT_LOCAL_RETENTION);
 		agent->param.local_retention_hours = A_DEFAULT_LOCAL_RETENTION;
 	} else
-		agent->param.local_retention_hours = (uint8_t)retention_int;
+		agent->param.local_retention_hours = (uint16_t)retention_int;
 
 	// extract schedules
 	var_ptr = yvar_get_from_path(params, A_PARAM_PATH_SCHEDULES);
@@ -366,19 +373,27 @@ static ystatus_t backup_fetch_params(agent_t *agent) {
 		ADEBUG("│ ├ %d" YANSI_FAINT " post-script(s)" YANSI_RESET, ytable_length(agent->param.post_scripts));
 	} else
 		ADEBUG("│ ├ " YANSI_FAINT "No post-script" YANSI_RESET);
+	// get MySQL databases
+	var_ptr2 = yvar_get_from_path(savepack, A_PARAM_PATH_MYSQL);
+	if (var_ptr2 && yvar_is_table(var_ptr2)) {
+		agent->param.mysql = yvar_get_table(var_ptr2);
+		ADEBUG("│ ├ %d" YANSI_FAINT " MySQL database(s)" YANSI_RESET, ytable_length(agent->param.databases));
+	} else
+		ADEBUG("│ ├ " YANSI_FAINT "No MySQL database" YANSI_RESET);
+	// get PostgreSQL databases
+	var_ptr2 = yvar_get_from_path(savepack, A_PARAM_PATH_PGSQL);
+	if (var_ptr2 && yvar_is_table(var_ptr2)) {
+		agent->param.pgsql = yvar_get_table(var_ptr2);
+		ADEBUG("│ ├ %d" YANSI_FAINT " PostgreSQL database(s)" YANSI_RESET, ytable_length(agent->param.databases));
+	} else
+		ADEBUG("│ ├ " YANSI_FAINT "No PostgreSQL database" YANSI_RESET);
 	// get files
 	var_ptr2 = yvar_get_from_path(savepack, A_PARAM_PATH_FILE);
 	if (var_ptr2 && yvar_is_table(var_ptr2)) {
 		agent->param.files = yvar_get_table(var_ptr2);
-		ADEBUG("│ ├ %d" YANSI_FAINT " file(s)" YANSI_RESET, ytable_length(agent->param.files));
+		ADEBUG("│ └ %d" YANSI_FAINT " file(s)" YANSI_RESET, ytable_length(agent->param.files));
 	} else
-		ADEBUG("│ ├ " YANSI_FAINT "No file" YANSI_RESET);
-	// get databases
-	var_ptr2 = yvar_get_from_path(savepack, A_PARAM_PATH_DB);
-	if (var_ptr2 && yvar_is_table(var_ptr2)) {
-		ADEBUG("│ └ %d" YANSI_FAINT " database(s)" YANSI_RESET, ytable_length(agent->param.databases));
-	} else
-		ADEBUG("│ └ " YANSI_FAINT "No database" YANSI_RESET);
+		ADEBUG("│ └ " YANSI_FAINT "No file" YANSI_RESET);
 
 	// search the storage
 	ADEBUG("├ " YANSI_FAINT "Search for the storage from its ID" YANSI_RESET);
@@ -406,12 +421,11 @@ static ystatus_t backup_fetch_params(agent_t *agent) {
 }
 /* Create output directory. */
 static ystatus_t backup_create_output_directory(agent_t *agent) {
-	time_t current_time = time(NULL);
-	struct tm *tm = localtime(&current_time);
+	struct tm tm = *gmtime(&agent->exec_timestamp);
 
 	// generate path
-	agent->datetime_chunk_path = ys_printf(NULL, "%04d-%02d-%02d/%02d:00", tm->tm_year + 1900,
-	                                       tm->tm_mon + 1, tm->tm_mday, tm->tm_hour);
+	agent->datetime_chunk_path = ys_printf(NULL, "%04d-%02d-%02d/%02d:00", tm.tm_year + 1900,
+	                                       tm.tm_mon + 1, tm.tm_mday, tm.tm_hour);
 	agent->backup_path = ys_printf(NULL, "%s/%s", agent->conf.archives_path, agent->datetime_chunk_path);
 	if (!agent->datetime_chunk_path || !agent->backup_path) {
 		ALOG("└ " YANSI_RED "Memory allocation error" YANSI_RESET);
@@ -511,6 +525,11 @@ static ystatus_t backup_exec_post_script(uint64_t hash, char *key, void *data, v
 	}
 	ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
 	return (YENOERR);
+}
+/* Backup all listed databases. They are tar'ed and compressed. */
+static void backup_databases(agent_t *agent) {
+	ystatus_t st;
+
 }
 /* Backup all listed files. They are tar'ed and compressed. */
 static void backup_files(agent_t *agent) {

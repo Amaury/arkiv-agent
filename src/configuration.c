@@ -49,6 +49,8 @@ void exec_configuration(agent_t *agent) {
 	check_web();
 	// crontab
 	cron_type = check_cron();
+	// database dump
+	check_database_dump();
 
 	/* needed user inputs */
 	// ask for the organization key
@@ -90,6 +92,7 @@ static ystr_t config_ask_orgkey(void) {
 
 	for (; ; ) {
 		printf("Please, enter your organization key (45 characters-long string):\n" YANSI_BLUE);
+		fflush(stdout);
 		ys_gets(&ys, stdin);
 		printf(YANSI_RESET);
 		ys_trim(ys);
@@ -98,6 +101,7 @@ static ystr_t config_ask_orgkey(void) {
 			return (ys);
 		printf(YANSI_RED "Bad key (should be %d characters long)\n\n" YANSI_RESET, A_ORG_KEY_LENGTH);
 	}
+	printf("\n");
 }
 /* Asks for the hostname. */
 static ystr_t config_ask_hostname(void) {
@@ -121,6 +125,7 @@ static ystr_t config_ask_hostname(void) {
 	if (res == YENOERR && hostname)
 		printf(" [" YANSI_YELLOW "%s" YANSI_RESET "]", hostname);
 	printf("\n" YANSI_BLUE);
+	fflush(stdout);
 	ys_gets(&ys, stdin);
 	printf(YANSI_RESET);
 	if (!ys_empty(ys)) {
@@ -134,6 +139,7 @@ static ystr_t config_ask_archives_path(agent_t *agent) {
 	ystr_t ys = NULL;
 
 	printf("Path to the local archives directory? [" YANSI_YELLOW "%s" YANSI_RESET "]\n" YANSI_BLUE, agent->conf.archives_path);
+	fflush(stdout);
 	ys_gets(&ys, stdin);
 	printf(YANSI_RESET);
 	ys_trim(ys);
@@ -147,6 +153,7 @@ static ystr_t config_ask_log_file(agent_t *agent) {
 	ystr_t ys = NULL;
 
 	printf("Path to the log file? [" YANSI_YELLOW "%s" YANSI_RESET "]\n" YANSI_BLUE, agent->conf.logfile);
+	fflush(stdout);
 	ys_gets(&ys, stdin);
 	printf(YANSI_RESET);
 	ys_trim(ys);
@@ -163,12 +170,13 @@ static bool config_ask_syslog(void) {
 	// ask for syslog
 	while (true) {
 		printf("Do you want to send logs to syslog? [" YANSI_YELLOW "y" YANSI_RESET
-		       "/" YANSI_YELLOW "N" YANSI_RESET "]\n" YANSI_BLUE);
+		       "/" YANSI_YELLOW "N" YANSI_RESET "] " YANSI_BLUE);
+		fflush(stdout);
 		ys_gets(&ys, stdin);
 		printf(YANSI_RESET);
 		ys_trim(ys);
 		if (!ys_empty(ys) && strcmp(ys, "n") && strcmp(ys, "N") && strcmp(ys, "y") && strcmp(ys, "Y")) {
-			printf(YANSI_RED "Incorrect value. Try again.\n" YANSI_RESET);
+			printf(YANSI_RED "Incorrect value. Try again." YANSI_RESET "\n");
 			continue;
 		}
 		if (!ys_empty(ys) && !strcasecmp(ys, "y"))
@@ -186,11 +194,12 @@ static ystr_t config_ask_encryption_password(void) {
 		       "It must be at least 24 characters long (40 characters is recommended).\n");
 		printf("You can generate a strong password with this command: "
 		       YANSI_TEAL "head -c 32 /dev/urandom | base64\n" YANSI_RESET YANSI_BLUE);
+		fflush(stdout);
 		ys_gets(&ys, stdin);
 		printf(YANSI_RESET);
 		ys_trim(ys);
 		if (ys_bytesize(ys) < A_MINIMUM_CRYPT_PWD_LENGTH) {
-			printf(YANSI_RED "Password too short.\n" YANSI_RESET);
+			printf(YANSI_RED "Password too short." YANSI_RESET "\n");
 			continue;
 		}
 		return (ys);
@@ -208,13 +217,15 @@ static void config_write_json_file(const char *org_key, const char *hostname, co
 	ytable_set_key(table, A_JSON_SYSLOG, yvar_new_bool(syslog));
 	ytable_set_key(table, A_JSON_CRYPT_PWD, yvar_new_const_string(crypt_pwd));
 	printf("‣ Writing configuration file " YANSI_PURPLE A_PATH_AGENT_CONFIG YANSI_RESET "... ");
+	fflush(stdout);
 	if (!yfile_touch(A_PATH_AGENT_CONFIG, 0600, 0700) ||
 	    yjson_write(A_PATH_AGENT_CONFIG, config, true) != YENOERR) {
-		printf(YANSI_RED "failed. Please try again.\n\n" YANSI_RESET);
-		printf(YANSI_RED "Abort.\n" YANSI_RESET);
+		printf(YANSI_RED "failed. Please try again." YANSI_RESET "\n\n");
+		printf(YANSI_RED "Abort." YANSI_RESET "\n");
+		fflush(stdout);
 		exit(2);
 	}
-	printf(YANSI_GREEN "done\n" YANSI_RESET);
+	printf(YANSI_GREEN "done" YANSI_RESET "\n");
 	ytable_free(table);
 }
 /* Add the agent execution to the crontab. */
@@ -224,49 +235,52 @@ static void config_add_to_crontab(agent_t *agent, config_crontab_t cron_type) {
 	// search for /etc/cron.hourly directory
 	if (cron_type == A_CONFIG_CRON_HOURLY) {
 		printf("‣ Add to crontab (file " YANSI_PURPLE A_CRON_HOURLY_PATH YANSI_RESET ")... ");
+		fflush(stdout);
 		ys = ys_printf(NULL, A_CRONTAB_SCRIPT, agent->agent_path);
 		if (yfile_put_string(A_CRON_HOURLY_PATH, ys) &&
 		    !chmod(A_CRON_HOURLY_PATH, 0755)) {
-			printf(YANSI_GREEN "done\n" YANSI_RESET);
+			printf(YANSI_GREEN "done" YANSI_RESET "\n");
 			ys_free(ys);
 			return;
 		}
 		unlink(A_CRON_HOURLY_PATH);
-		printf(YANSI_RED "failed. Please try again.\n\n" YANSI_RESET);
-		printf(YANSI_RED "Abort.\n" YANSI_RESET);
+		printf(YANSI_RED "failed. Please try again." YANSI_RESET "\n\n");
+		printf(YANSI_RED "Abort." YANSI_RESET "\n");
 		exit(2);
 	}
 	// search for /etc/cron.d directory
 	if (cron_type == A_CONFIG_CRON_D) {
 		printf("‣ Add to crontab (file " YANSI_PURPLE A_CRON_D_PATH YANSI_RESET ")... ");
+		fflush(stdout);
 		ys = ys_printf(NULL, A_CRONTAB_LINE, agent->agent_path);
 		if (yfile_put_string(A_CRON_D_PATH, ys) &&
 		    !chmod(A_CRON_D_PATH, 0644)) {
-			printf(YANSI_GREEN "done\n" YANSI_RESET);
+			printf(YANSI_GREEN "done" YANSI_RESET "\n");
 			ys_free(ys);
 			return;
 		}
 		unlink(A_CRON_D_PATH);
-		printf(YANSI_RED "failed. Please try again.\n\n" YANSI_RESET);
-		printf(YANSI_RED "Abort.\n" YANSI_RESET);
+		printf(YANSI_RED "failed. Please try again." YANSI_RESET "\n\n");
+		printf(YANSI_RED "Abort." YANSI_RESET "\n");
 		exit(2);
 	}
 	// search for /etc/crontab file
 	if (cron_type == A_CONFIG_CRON_CRONTAB) {
 		printf("‣ Add to crontab (file " YANSI_PURPLE A_CRON_ETC_PATH YANSI_RESET ")... ");
+		fflush(stdout);
 		ys = ys_printf(NULL, A_CRONTAB_LINE, agent->agent_path);
 		if (yfile_contains(A_CRON_ETC_PATH, ys)) {
-			printf(YANSI_GREEN "already done\n" YANSI_RESET);
+			printf(YANSI_GREEN "already done" YANSI_RESET "\n");
 			ys_free(ys);
 			return;
 		}
 		if (yfile_append_string(A_CRON_ETC_PATH, ys)) {
-			printf(YANSI_GREEN "done\n" YANSI_RESET);
+			printf(YANSI_GREEN "done" YANSI_RESET "\n");
 			ys_free(ys);
 			return;
 		}
-		printf(YANSI_RED "failed. Please try again.\n\n" YANSI_RESET);
-		printf(YANSI_RED "Abort.\n" YANSI_RESET);
+		printf(YANSI_RED "failed. Please try again." YANSI_RESET "\n\n");
+		printf(YANSI_RED "Abort." YANSI_RESET "\n");
 		exit(2);
 	}
 }

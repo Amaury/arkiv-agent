@@ -59,7 +59,11 @@ agent_t *agent_new(char *exe_path) {
 }
 /* Returns a copy of an environment variable, or a default value. */
 ystr_t agent_getenv(char *envvar, ystr_t default_value) {
+#if defined ZIG_PLATFORM_MACOS_X86_64 || defined ZIG_PLATFORM_MACOS_ARM_64
+	char *value = getenv(envvar);
+#else
 	char *value = secure_getenv(envvar);
+#endif
 	ystr_t ys = NULL;
 	if (value) {
 		ys = ys_copy(value);
@@ -74,7 +78,11 @@ ystr_t agent_getenv(char *envvar, ystr_t default_value) {
 }
 /* Returns a copy of an environment variable, or a copy of a default value. */
 ystr_t agent_getenv_static(char *envvar, const char *default_value) {
+#if ZIG_PLATFORM_MACOS_X86_64 || ZIG_PLATFORM_MACOS_ARM_64
+	char *value = getenv(envvar);
+#else
 	char *value = secure_getenv(envvar);
+#endif
 	ystr_t ys = NULL;
 	if (value) {
 		ys = ys_copy(value);

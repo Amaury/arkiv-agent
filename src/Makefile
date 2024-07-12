@@ -4,7 +4,7 @@
 
 # Executable names
 NAME			= arkiv_agent
-NAME_LINUX_X86_32	= arkiv_agent-linux-i386
+NAME_LINUX_X86_32	= arkiv_agent-linux-x86_32
 NAME_LINUX_X86_64	= arkiv_agent-linux-x86_64
 NAME_LINUX_ARM_32	= arkiv_agent-linux-arm_32
 NAME_LINUX_ARM_64	= arkiv_agent-linux-arm_64
@@ -55,8 +55,8 @@ CC_LINUX_X86_64	  = $(ZIG) cc -target x86_64-linux-musl
 CC_LINUX_ARM_32	  = $(ZIG) cc -target arm-linux-musleabi
 CC_LINUX_ARM_64	  = $(ZIG) cc -target aarch64-linux-musl
 CC_LINUX_RISCV_64 = $(ZIG) cc -target riscv64-linux-musl
-CC_MACOS_X86_64	  = $(ZIG) cc -target x86_64-macos-none
-CC_MACOS_ARM_64	  = $(ZIG) cc -target aarch64-macos-none
+CC_MACOS_X86_64	  = $(ZIG) cc -target x86_64-macos-none -DZIG_PLATFORM_MACOS_X86_64
+CC_MACOS_ARM_64	  = $(ZIG) cc -target aarch64-macos-none -DZIG_PLATFORM_MACOS_ARM_64
 
 OBJS	= $(SRC:.c=.o)
 
@@ -90,7 +90,11 @@ dev: $(NAME)
 linux-x86_32: CC=$(CC_LINUX_X86_32)
 
 linux-x86_32: $(OBJS)
-	$(CC) $(OBJS) ../lib/y/*.o $(LDFLAGS_STATIC) -o $(NAME_LINUX_X86_32)
+	mkdir tmp
+	cp ../lib/y/*.o *.o tmp/
+	cd tmp; $(CC) *.o $(LDFLAGS_STATIC) -o $(NAME_LINUX_X86_32)
+	mv tmp/$(NAME_LINUX_X86_32) .
+	rm -rf tmp
 
 # static linking, Linux x86_64
 linux-x86_64: CC=$(CC_LINUX_X86_64)
@@ -102,10 +106,14 @@ linux-x86_64: $(OBJS)
 linux-arm_32: CC=$(CC_LINUX_ARM_32)
 
 linux-arm_32: $(OBJS)
-	$(CC) $(OBJS) ../lib/y/*.o $(LDFLAGS_STATIC) -o $(NAME_LINUX_ARM_32)
+	mkdir tmp
+	cp ../lib/y/*.o *.o tmp/
+	cd tmp; $(CC) *.o $(LDFLAGS_STATIC) -o $(NAME_LINUX_ARM_32)
+	mv tmp/$(NAME_LINUX_ARM_32) .
+	rm -rf tmp
 
 # static linking, Linux ARM 64
-$linux-arm_64: CC=$(CC_LINUX_ARM_64)
+linux-arm_64: CC=$(CC_LINUX_ARM_64)
 
 linux-arm_64: $(OBJS)
 	$(CC) $(OBJS) ../lib/y/*.o $(LDFLAGS_STATIC) -o $(NAME_LINUX_ARM_64)

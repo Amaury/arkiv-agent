@@ -83,6 +83,12 @@ void exec_backup(agent_t *agent);
 	 */
 	static ystatus_t backup_exec_post_script(uint64_t hash, char *key, void *data, void *user_data);
 	/**
+	 * @function	backup_databases
+	 * @abstract	Backup all listed databases. They are tar'ed and compressed.
+	 * @param	agent	Pointer to the agent structure.
+	 */
+	static void backup_databases(agent_t *agent);
+	/**
 	 * @function	backup_files
 	 * @abstract	Backup all listed files. They are tar'ed and compressed.
 	 * @param	agent	Pointer to the agent structure.

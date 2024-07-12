@@ -151,8 +151,10 @@
 #define A_PARAM_PATH_POST			"/post"
 /** @const A_PARAM_PATH_FILE			Path to the list of files. */
 #define A_PARAM_PATH_FILE			"/file"
-/** @const A_PARAM_PATH_DB			Path to the list of databases. */
-#define A_PARAM_PATH_DB				"/db"
+/** @const A_PARAM_PATH_MYSQL			Path to the list of MySQL databases. */
+#define A_PARAM_PATH_MYSQL			"/mysql"
+/** @const A_PARAM_PATH_PGSQL			Path to the list of PostgreSQL databases. */
+#define A_PARAM_PATH_PGSQL			"/pgsql"
 /** @const A_PARAM_KEY_TYPE			Key to a type element. */
 #define A_PARAM_KEY_TYPE			"t"
 /** @const A_PARAM_KEY_ACCESS_KEY		Key to an access key element. */
@@ -273,6 +275,7 @@ typedef enum {
  * @field	conf_path		Path to the configuration file.
  * @field	debug_mode		True if the debug mode was set.
  * @field	log_fd			File descriptor to the log file.
+ * @field	datetime_chunk_path	Date and time string.
  * @field	backup_path		Real path to the backup directory.
  * @field	backup_files_path	Path to the files backup directory.
  * @field	backup_databases_path	Path to the databases backup directory.
@@ -286,14 +289,21 @@ typedef enum {
  * @field	bin.tar			Path to the tar program.
  * @field	bin.z			Path to the compression program.
  * @field	bin.crypt		Path to the encryption program.
- * @field	bin.checksum		Path to the sha512sum.
+ * @field	bin.checksum		Path to sha512sum.
+ * @field	bin.mysqldump		Path to mysqldump.
+ * @field	bin.pg_dump		Path to pg_dump.
  * @field	param.org_name		Organization name.
  * @field	param.encryption	Encryption algorithm.
  * @field	param.compression	Compression algorithm.
+ * @field	local_retention_hours	Number of hours of the local retention.
+ * @field	retention_type		Type of distant retention.
+ * @field	retention_duration	Duration of the distant retention.
+ * @field	savepack_id		Identifier of the used saepack.
  * @field	param.pre_scripts	List of pre-scripts.
  * @field	param.post_scripts	List of post-scripts.
  * @field	param.files		List of files to back up.
- * @field	param.databases		List of databases to back up.
+ * @field	param.mysql		List of MySQL databases to back up.
+ * @field	param.pgsql		List of PostgreSQL databases to back up.
  * @field	param.storage_name	Name of the used storage.
  * @field	param.storage		Associative array of storage parameters.
  * @field	param.storage_env	List of environment variables for the storage setting.
@@ -327,6 +337,8 @@ typedef struct agent_s {
 		ystr_t z;
 		ystr_t crypt;
 		ystr_t checksum;
+		ystr_t mysqldump;
+		ystr_t pg_dump;
 	} bin;
 	struct {
 		ystr_t org_name;
@@ -339,7 +351,8 @@ typedef struct agent_s {
 		ytable_t *pre_scripts;
 		ytable_t *post_scripts;
 		ytable_t *files;
-		ytable_t *databases;
+		ytable_t *mysql;
+		ytable_t *pgsql;
 		ystr_t storage_name;
 		uint64_t storage_id;
 		ytable_t *storage;

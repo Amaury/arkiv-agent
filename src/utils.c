@@ -64,24 +64,24 @@ ystr_t get_program_path(const char *bin_name) {
 void check_tar(void) {
 	if (check_program_exists("tar"))
 		return;
-	printf(YANSI_RED "Unable to find 'tar' program on this server.\n\n" YANSI_RESET);
+	printf(YANSI_RED "Unable to find 'tar' program on this server." YANSI_RESET "\n\n");
 	printf("Please, install " YANSI_GOLD "tar" YANSI_RESET " in a standard location ("
 	       YANSI_PURPLE "/bin/tar" YANSI_RESET ", " YANSI_PURPLE "/usr/bin/tar" YANSI_RESET " or "
 	       YANSI_PURPLE "/usr/local/bin/tar" YANSI_RESET ") and try again.\n");
 	printf(YANSI_FAINT "See " YANSI_LINK " for more information.\n\n" YANSI_RESET, "https://doc.arkiv.sh/agent/install", "the documentation");
-	printf(YANSI_RED "Abort\n" YANSI_RESET);
+	printf(YANSI_RED "Abort" YANSI_RESET "\n");
 	exit(2);
 }
 /* Checks if the sha512sum program is installed. Aborts if not. */
 void check_sha512sum(void) {
 	if (check_program_exists("sha512sum"))
 		return;
-	printf(YANSI_RED "Unable to find 'sha512sum' program on this server.\n\n" YANSI_RESET);
+	printf(YANSI_RED "Unable to find 'sha512sum' program on this server." YANSI_RESET "\n\n");
 	printf("Please, install " YANSI_GOLD "sha512sum" YANSI_RESET " in a standard location ("
 	       YANSI_PURPLE "/bin/sha512sum" YANSI_RESET ", " YANSI_PURPLE "/usr/bin/sha512sum" YANSI_RESET " or "
 	       YANSI_PURPLE "/usr/local/bin/sha512sum" YANSI_RESET ") and try again.\n");
 	printf(YANSI_FAINT "See " YANSI_LINK " for more information.\n\n" YANSI_RESET, "https://doc.arkiv.sh/agent/install", "the documentation");
-	printf(YANSI_RED "Abort\n" YANSI_RESET);
+	printf(YANSI_RED "Abort" YANSI_RESET "\n");
 	exit(2);
 }
 /* Checks if compression programs are installed. */
@@ -93,7 +93,7 @@ void check_z(void) {
 	if (hasGzip && hasBzip2 && hasXz && hasZstd)
 		return;
 	if (!hasGzip && !hasBzip2 && !hasXz && !hasZstd) {
-		printf(YANSI_RED "Unable to find any supported compression program.\n\n" YANSI_RESET);
+		printf(YANSI_RED "Unable to find any supported compression program." YANSI_RESET "\n\n");
 		printf("You may install " YANSI_GOLD "gzip" YANSI_RESET ", " YANSI_GOLD "bzip2" YANSI_RESET ", "
 		       YANSI_GOLD "xz" YANSI_RESET " or " YANSI_GOLD "zstd" YANSI_RESET " in a standard location ("
 		       YANSI_PURPLE "/bin" YANSI_RESET ", " YANSI_PURPLE "/usr/bin" YANSI_RESET " or "
@@ -110,14 +110,16 @@ void check_z(void) {
 		printf(YANSI_FAINT "(2015) Not much installed; good compression level and very high speed\n" YANSI_RESET);
 	}
 	printf("\nDo you want to continue? [" YANSI_YELLOW "Y" YANSI_RESET "/" YANSI_YELLOW "n" YANSI_RESET "] " YANSI_BLUE);
+	fflush(stdout);
 	ystr_t ys = NULL;
 	ys_gets(&ys, stdin);
 	printf(YANSI_RESET);
 	ys_trim(ys);
 	bool shouldContinue = (ys_empty(ys) || !strcasecmp(ys, "y") || !strcasecmp(ys, "yes")) ? true : false;
 	ys_free(ys);
+	printf("\n");
 	if (!shouldContinue) {
-		printf(YANSI_RED "Abort.\n" YANSI_RESET);
+		printf(YANSI_RED "Abort." YANSI_RESET "\n");
 		exit(2);
 	}
 }
@@ -133,7 +135,7 @@ void check_crypt(void) {
 		printf("You must install " YANSI_GOLD "openssl" YANSI_RESET ", " YANSI_GOLD "scrypt" YANSI_RESET " or "
 		       YANSI_GOLD "gpg" YANSI_RESET " in a standard location (" YANSI_PURPLE "/bin" YANSI_RESET ", "
 		       YANSI_PURPLE "/usr/bin" YANSI_RESET " or " YANSI_PURPLE "/usr/local/bin" YANSI_RESET ").\n\n");
-		printf(YANSI_RED "Abort.\n" YANSI_RESET);
+		printf(YANSI_RED "Abort." YANSI_RESET "\n");
 		exit(2);
 	}
 	printf("Here are the encryption software installed on this server:\n");
@@ -143,15 +145,17 @@ void check_crypt(void) {
 	printf(YANSI_FAINT "Very secure; slow by design\n" YANSI_RESET);
 	printf("%s gpg      " YANSI_RESET, (hasGpg ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
 	printf(YANSI_FAINT "GNU's implementation of the OpenPGP standard\n" YANSI_RESET);
-	printf("Do you want to continue? [" YANSI_YELLOW "Y" YANSI_RESET "/" YANSI_YELLOW "n" YANSI_RESET "] " YANSI_BLUE);
+	printf("\nDo you want to continue? [" YANSI_YELLOW "Y" YANSI_RESET "/" YANSI_YELLOW "n" YANSI_RESET "] " YANSI_BLUE);
+	fflush(stdout);
 	ystr_t ys = NULL;
 	ys_gets(&ys, stdin);
 	printf(YANSI_RESET);
 	ys_trim(ys);
 	bool shouldContinue = (ys_empty(ys) || !strcasecmp(ys, "y") || !strcasecmp(ys, "yes")) ? true : false;
 	ys_free(ys);
+	printf("\n");
 	if (!shouldContinue) {
-		printf(YANSI_RED "Abort.\n" YANSI_RESET);
+		printf(YANSI_RED "Abort." YANSI_RESET "\n");
 		exit(2);
 	}
 }
@@ -165,7 +169,7 @@ void check_web(void) {
 	printf("You must install " YANSI_GOLD "wget" YANSI_RESET " or " YANSI_GOLD "curl" YANSI_RESET
 	       " in a standard location (" YANSI_PURPLE "/bin" YANSI_RESET ", " YANSI_PURPLE "/usr/bin" YANSI_RESET
 	       " or " YANSI_PURPLE "/usr/local/bin" YANSI_RESET ").\n\n");
-	printf(YANSI_RED "Abort.\n" YANSI_RESET);
+	printf(YANSI_RED "Abort." YANSI_RESET "\n");
 	exit(2);
 }
 /* Checks if a crontab execution can be planned. */
@@ -181,7 +185,39 @@ config_crontab_t check_cron(void) {
 	       " or " YANSI_YELLOW "/etc/cron.d" YANSI_RESET ",\nor the file " YANSI_YELLOW "/etc/crontab" YANSI_RESET
 	       ".\n\n");
 	printf(YANSI_BOLD "Maybe you forgot to execute the agent program as super-user?\n\n" YANSI_RESET);
-	printf(YANSI_RED "Abort.\n" YANSI_RESET);
+	printf(YANSI_RED "Abort." YANSI_RESET "\n");
 	exit(2);
+}
+/* Check if database dump programs (mysqldump, pg_dump) are installed. */
+void check_database_dump(void) {
+	bool hasMysqldump = check_program_exists("mysqldump");
+	bool hasPgdump = check_program_exists("pg_dump");
+	if (hasMysqldump && hasPgdump)
+		return;
+	if (!hasMysqldump && !hasPgdump) {
+		printf("There is no database dump program installed.\n"
+		       "You will not be able to back up any MySQL or Postgresql database.\n");
+	} else if (!hasMysqldump) {
+		printf("You have " YANSI_FAINT "pg_dump" YANSI_RESET " installed, but not "
+		       YANSI_FAINT "mysqldump" YANSI_RESET ".\n"
+		       "Therefore, you will be able to back up PostgreSQL databases but not MySQL databases.\n");
+	} else {
+		printf("You have " YANSI_FAINT "mysqldump" YANSI_RESET " installed, but not "
+		       YANSI_FAINT "pg_dump" YANSI_RESET ".\n"
+		       "Therefore, you will be able to back up MySQL databases but not PostgreSQL databases.\n");
+	}
+	printf("Do you want to continue? [" YANSI_YELLOW "Y" YANSI_RESET "/" YANSI_YELLOW "n" YANSI_RESET "] " YANSI_BLUE);
+	fflush(stdout);
+	ystr_t ys = NULL;
+	ys_gets(&ys, stdin);
+	printf(YANSI_RESET);
+	ys_trim(ys);
+	bool shouldContinue = (ys_empty(ys) || !strcasecmp(ys, "y") || !strcasecmp(ys, "yees")) ? true : false;
+	ys_free(ys);
+	printf("\n");
+	if (!shouldContinue) {
+		printf(YANSI_RED "Abort." YANSI_RESET "\n");
+		exit(2);
+	}
 }
 

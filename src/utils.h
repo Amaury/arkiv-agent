@@ -58,4 +58,9 @@ void check_web(void);
  * @return	The type of crontab installation.
  */
 config_crontab_t check_cron(void);
+/**
+ * @function	check_database_dump
+ * @abstract	Checks if database dump programs (mysqldump, pg_dump) are installed.
+ */
+void check_database_dump(void);
 
