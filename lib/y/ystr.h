@@ -308,6 +308,14 @@ bool ys_is_numeric(const char *s);
  */
 ystr_t ys_filenamize(char *str);
 /**
+ * @function	ys_filenamize_path
+ * @abstract	Create a string which can be used as a file name, preserving directory separators.
+ * @param	str			The input string.
+ * @param	slash_replacement	The string to use in place of slashes characters.
+ * @return	The generated string.
+ */
+ystr_t ys_filenamize_path(char *str, char *slash_replacement);
+/**
  * @function	ys_escape_shell_arg
  * @abstract	Adds quotes before and after a string, and adds backslashes before quotes in the string.
  * @param	str	The input string.

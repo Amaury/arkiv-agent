@@ -705,6 +705,41 @@ ystr_t ys_filenamize(char *str) {
 		ys_addc(&res, MINUS);
 	return (res);
 }
+/* Create a string which can be used as a file name, preserving directory separators. */
+ystr_t ys_filenamize_path(char *str, char *slash_replacement) {
+	char *pt;
+	ystr_t res;
+
+	if (!str || !(res = ys_new("")))
+		return (NULL);
+	// replace special characters with dashes
+	bool dash = true;
+	for (pt = str; *pt; ++pt) {
+		if ((*pt >= '0' && *pt <= '9') ||
+		    (*pt >= 'a' && *pt <= 'z') ||
+		    (*pt >= 'A' && *pt <= 'Z') ||
+		    *pt == UNDERSCORE || *pt == DOT) {
+			ys_addc(&res, *pt);
+			dash = false;
+		} else if (*pt == SLASH) {
+			ys_append(&res, slash_replacement);
+			dash = false;
+		} else if (*pt == MINUS) {
+			ys_addc(&res, *pt);
+			dash = true;
+		} else if (!dash) {
+			ys_addc(&res, MINUS);
+			dash = true;
+		}
+	}
+	// remove dashes at the end of the string
+	while (!ys_empty(res) && (pt = res) && pt[ys_bytesize(res)] == MINUS)
+		ys_rshift(res);
+	// if the string is empty, add a dash
+	if (ys_empty(res))
+		ys_addc(&res, MINUS);
+	return (res);
+}
 /* Adds quotes before and after a string, and adds backslashes before quotes in the string. */
 ystr_t ys_escape_shell_arg(char *str) {
 	char *pt;
