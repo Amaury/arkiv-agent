@@ -53,7 +53,7 @@ cleanup:
 /** Send the report of a backup. */
 ystatus_t api_backup_report(agent_t *agent) {
 	ystatus_t st = YENOERR;
-	bool st_global = true, st_pre = true, st_post = true, st_files = true, st_db = true;
+	bool st_global = true;
 	yvar_t *report = yvar_new_table(NULL);
 	if (!report)
 		return (YENOMEM);
@@ -122,8 +122,7 @@ ystatus_t api_backup_report(agent_t *agent) {
 		}
 		if ((st = ytable_set_key(root, "pre", var)) != YENOERR)
 			goto cleanup;
-		void *user_data[2] = {(void*)var, (void*)&st_pre};
-		ytable_foreach(agent->exec_log.pre_scripts, api_report_process_script, user_data);
+		ytable_foreach(agent->exec_log.pre_scripts, api_report_process_script, var);
 	}
 	// post-scripts
 	if (!ytable_empty(agent->exec_log.post_scripts)) {
@@ -133,8 +132,7 @@ ystatus_t api_backup_report(agent_t *agent) {
 		}
 		if ((st = ytable_set_key(root, "post", var)) != YENOERR)
 			goto cleanup;
-		void *user_data[2] = {(void*)var, (void*)&st_post};
-		ytable_foreach(agent->exec_log.post_scripts, api_report_process_script, user_data);
+		ytable_foreach(agent->exec_log.post_scripts, api_report_process_script, var);
 	}
 	// files
 	if (!ytable_empty(agent->exec_log.backup_files)) {
@@ -144,22 +142,25 @@ ystatus_t api_backup_report(agent_t *agent) {
 		}
 		if ((st = ytable_set_key(root, "files", var)) != YENOERR)
 			goto cleanup;
-		void *user_data[2] = {(void*)var, (void*)&st_files};
-		ytable_foreach(agent->exec_log.backup_files, api_report_process_item, user_data);
+		ytable_foreach(agent->exec_log.backup_files, api_report_process_item, var);
 	}
 	// databases
-	if (!ytable_empty(agent->exec_log.backup_databases)) {
+	if (!ytable_empty(agent->exec_log.backup_mysql) ||
+	    !ytable_empty(agent->exec_log.backup_pgsql)) {
 		if (!(var = yvar_new_table(NULL))) {
 			st = YENOMEM;
 			goto cleanup;
 		}
 		if ((st = ytable_set_key(root, "db", var)) != YENOERR)
 			goto cleanup;
-		void *user_data[2] = {(void*)var, (void*)&st_db};
-		ytable_foreach(agent->exec_log.backup_databases, api_report_process_item, user_data);
+		if (!ytable_empty(agent->exec_log.backup_mysql))
+			ytable_foreach(agent->exec_log.backup_mysql, api_report_process_item, var);
+		if (!ytable_empty(agent->exec_log.backup_pgsql))
+			ytable_foreach(agent->exec_log.backup_pgsql, api_report_process_item, var);
 	}
 	// statuses
-	if (!st_pre || !st_post || !st_files || !st_db)
+	if (!agent->exec_log.status_pre_scripts || !agent->exec_log.status_post_scripts ||
+	    !agent->exec_log.status_files || !agent->exec_log.status_databases)
 		st_global = false;
 	if (!(var = yvar_new_bool(st_global))) {
 		st = YENOMEM;
@@ -168,7 +169,7 @@ ystatus_t api_backup_report(agent_t *agent) {
 	if ((st = ytable_set_key(root, "st_global", var)) != YENOERR)
 		goto cleanup;
 	if (!ytable_empty(agent->exec_log.pre_scripts)) {
-		if (!(var = yvar_new_bool(st_pre))) {
+		if (!(var = yvar_new_bool(agent->exec_log.status_pre_scripts))) {
 			st = YENOMEM;
 			goto cleanup;
 		}
@@ -176,7 +177,7 @@ ystatus_t api_backup_report(agent_t *agent) {
 			goto cleanup;
 	}
 	if (!ytable_empty(agent->exec_log.post_scripts)) {
-		if (!(var = yvar_new_bool(st_post))) {
+		if (!(var = yvar_new_bool(agent->exec_log.status_post_scripts))) {
 			st = YENOMEM;
 			goto cleanup;
 		}
@@ -184,15 +185,16 @@ ystatus_t api_backup_report(agent_t *agent) {
 			goto cleanup;
 	}
 	if (!ytable_empty(agent->exec_log.backup_files)) {
-		if (!(var = yvar_new_bool(st_files))) {
+		if (!(var = yvar_new_bool(agent->exec_log.status_files))) {
 			st = YENOMEM;
 			goto cleanup;
 		}
 		if ((st = ytable_set_key(root, "st_files", var)) != YENOERR)
 			goto cleanup;
 	}
-	if (!ytable_empty(agent->exec_log.backup_databases)) {
-		if (!(var = yvar_new_bool(st_db))) {
+	if (!ytable_empty(agent->exec_log.backup_mysql) ||
+	    !ytable_empty(agent->exec_log.backup_pgsql)) {
+		if (!(var = yvar_new_bool(agent->exec_log.status_databases))) {
 			st = YENOMEM;
 			goto cleanup;
 		}
@@ -505,24 +507,18 @@ static ystatus_t api_url_add_param(uint64_t hash, char *key, void *data, void *u
 }
 /* Add a script to the report. */
 static ystatus_t api_report_process_script(uint64_t hash, char *key, void *data, void *user_data) {
-	void **user_data_array = (void**)user_data;
-	yvar_t *var = (yvar_t*)user_data_array[0];
+	yvar_t *var = (yvar_t*)user_data;
 	ytable_t *scripts = yvar_get_table(var);
-	ystatus_t *st_script = (ystatus_t*)user_data_array[1];
 	log_script_t *entry = (log_script_t*)data;
 
-	if (!entry->success)
-		*st_script = false;
 	if (!(var = yvar_new_bool(entry->success)))
 		return (YENOMEM);
 	return (ytable_set_key(scripts, entry->command, var));
 }
 /** Add a file or database to the report. */
 static ystatus_t api_report_process_item(uint64_t hash, char *key, void *data, void *user_data) {
-	void **user_data_array = (void**)user_data;
-	yvar_t *var = (yvar_t*)user_data_array[0];
+	yvar_t *var = (yvar_t*)user_data;
 	ytable_t *items = yvar_get_table(var);
-	bool *st_items = (bool*)user_data_array[1];
 	log_item_t *item = (log_item_t*)data;
 
 	if (item->success) {
@@ -531,7 +527,6 @@ static ystatus_t api_report_process_item(uint64_t hash, char *key, void *data, v
 			return (YENOMEM);
 	} else {
 		// there was an error during item's backup
-		*st_items = false;
 		if (item->dump_status != YENOERR && item->compress_status != YENOERR &&
 		    item->encrypt_status != YENOERR && item->checksum_status != YENOERR &&
 		    item->upload_status != YENOERR) {

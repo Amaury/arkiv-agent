@@ -316,6 +316,13 @@ ystr_t ys_filenamize(char *str);
  */
 ystr_t ys_filenamize_path(char *str, char *slash_replacement);
 /**
+ * @function	ys_clean_ansi
+ * @abstract	Create a copy of a string, without ANSI escape sequences.
+ * @param	str	The input string.
+ * @return	The generated string.
+ */
+ystr_t ys_clean_ansi(const char *str);
+/**
  * @function	ys_escape_shell_arg
  * @abstract	Adds quotes before and after a string, and adds backslashes before quotes in the string.
  * @param	str	The input string.

@@ -10,7 +10,6 @@ SONAME =	liby.so
 # Name of source files (names.c)
 SRC =		yarray.c	\
 		yexec.c		\
-		yansi.c		\
 		ybase64.c	\
 		ybin.c		\
 		yexception.c	\

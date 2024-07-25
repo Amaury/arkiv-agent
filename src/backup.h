@@ -6,6 +6,7 @@
  */
 #pragma once
 
+#include "yjson.h"
 #include "agent.h"
 
 /**
@@ -83,12 +84,6 @@ void exec_backup(agent_t *agent);
 	 */
 	static ystatus_t backup_exec_post_script(uint64_t hash, char *key, void *data, void *user_data);
 	/**
-	 * @function	backup_databases
-	 * @abstract	Backup all listed databases. They are tar'ed and compressed.
-	 * @param	agent	Pointer to the agent structure.
-	 */
-	static void backup_databases(agent_t *agent);
-	/**
 	 * @function	backup_files
 	 * @abstract	Backup all listed files. They are tar'ed and compressed.
 	 * @param	agent	Pointer to the agent structure.
@@ -97,7 +92,7 @@ void exec_backup(agent_t *agent);
 	/**
 	 * @function	backup_file
 	 * @abstract	Backup one file.
-	 * @param	hash		Index in the list of scripts.
+	 * @param	hash		Index in the list of files.
 	 * @param	key		Always null.
 	 * @param	data		Path to the file to backup.
 	 * @param	user_data	Pointer to the agent structure.
@@ -106,6 +101,48 @@ void exec_backup(agent_t *agent);
 	 *		YENOEXEC if an error occurred during the backup.
 	 */
 	static ystatus_t backup_file(uint64_t hash, char *key, void *data, void *user_data);
+	/**
+	 * @function	backup_databases
+	 * @abstract	Backup all listed databases. They are tar'ed and compressed.
+	 * @param	agent	Pointer to the agent structure.
+	 */
+	static void backup_databases(agent_t *agent);
+	/**
+	 * @function	backup_mysql
+	 * @abstract	Backup a MySQL database.
+	 * @param	hash		Index in the list of MySQL databases.
+	 * @param	key		Always null.
+	 * @param	data		Associative array with database's information.
+	 * @param	user_data	Pointer to the agent structure.
+	 * @return	YENOERR if the database was dumped and compressed successfully.
+	 *		YEBADCONF if the configuration is not valid,
+	 *		YENOEXEC if an error occurred during the backup.
+	 */
+	static ystatus_t backup_mysql(uint64_t hash, char *key, void *data, void *user_data);
+	/**
+	 * @function	backup_pgsql
+	 * @abstract	Backup a PostgreSQL database.
+	 * @param	hash		Index in the list of PostgreSQL databases.
+	 * @param	key		Always null.
+	 * @param	data		Associative array with database's information.
+	 * @param	user_data	Pointer to the agent structure.
+	 * @return	YENOERR if the database was dumped and compressed successfully.
+	 *		YEBADCONF if the configuration is not valid,
+	 *		YENOEXEC if an error occurred during the backup.
+	 */
+	static ystatus_t backup_pgsql(uint64_t hash, char *key, void *data, void *user_data);
+	/**
+	 * @function	backup_pgsql
+	 * @abstract	Backup one PostgreSQL database.
+	 * @param	hash		Index in the list of PostgreSQL databases.
+	 * @param	key		Always null.
+	 * @param	data		Associative array with database's information.
+	 * @param	user_data	Pointer to the agent structure.
+	 * @return	YENOERR if the database was dumped and compressed successfully.
+	 *		YEBADCONF if the configuration is not valid,
+	 *		YENOEXEC if an error occurred during the backup.
+	 */
+	static ystatus_t backup_pgsql(uint64_t hash, char *key, void *data, void *user_data);
 	/**
 	 * @function	backup_encrypt
 	 * @abstract	Encrypt each backed up file.
@@ -122,6 +159,14 @@ void exec_backup(agent_t *agent);
 	 * @return	YENOERR if the item was encrypted successfully.
 	 */
 	static ystatus_t backup_encrypt_item(uint64_t hash, char *key, void *data, void *user_data);
+	/**
+	 * @function	backup_compress_file
+	 * @abstract	Compress a backed up file.
+	 * @param	agent	Pointer to the agent structure.
+	 * @param	log	Pointer to the file's log entry.
+	 * @return	YENOERR if the file was compressed successfully.
+	 */
+	static ystatus_t backup_compress_file(agent_t *agent, log_item_t *log);
 	/**
 	 * @function	backup_compute_checksums
 	 * @abstract	Compute the checksum of each backed up file.

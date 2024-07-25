@@ -41,8 +41,10 @@
 #define A_ENV_DEBUG_MODE	"debug_mode"
 /** @const A_ENV_ARCHIVES_PATH	Environment variable for the local archives path. */
 #define A_ENV_ARCHIVES_PATH	"archives_path"
-/** @count A_ENV_CRYPT_PWD	Environment variable for the encryption password. */
+/** @const A_ENV_CRYPT_PWD	Environment variable for the encryption password. */
 #define A_ENV_CRYPT_PWD		"crypt_pwd"
+/** @const A_ENV_ANSI		Environment variable for ANSI control characters in log. */
+#define A_ENV_ANSI		"ansi"
 
 /* ********** DEFAULT PATHS ************ */
 /** @const A_PATH_ROOT		Arkiv root path. */
@@ -177,6 +179,8 @@
 #define A_PARAM_KEY_PWD				"pw"
 /** @const A_PARAM_KEY_KEYFILE			Key to a key file. */
 #define A_PARAM_KEY_KEYFILE			"ke"
+/** @const A_PARAM_KEY_DB			Key to a database name. */
+#define A_PARAM_KEY_DB				"db"
 
 /* ********** ENCRYPTION METHOD PARAM CHARACTERS ********** */
 /** @const A_CRYPT_OPENSSL	OpenSSL. */
@@ -203,6 +207,12 @@
 #define A_STORAGE_TYPE_AWS_S3		"aws_s3"
 /** @const A_STORAGE_TYPE_SFTP		Storage type for SFTP. */
 #define A_STORAGE_TYPE_SFTP		"sftp"
+
+/* ********** DATABASE MACROS ********** */
+/** @const A_DB_ALL_DATABASES_DEFINITION	All databases. */
+#define A_DB_ALL_DATABASES_DEFINITION	"*"
+/** @const A_DB_ALL_DATABASES_FILENAME		Name of the dumpfile for all databases. */
+#define A_DB_ALL_DATABASES_FILENAME	"__all_databases__"
 
 /* ********** WEB PROGAMS ********** */
 /**
@@ -268,6 +278,16 @@ typedef enum {
 	A_RETENTION_YEARS
 } retention_type_t;
 /**
+ * @typedef	database_type_t
+ * @abstract	Defines a type of database.
+ * @field	A_DB_MYSQL	MySQL database.
+ * @field	A_DB_PGSQL	PostgreSQL database.
+ */
+typedef enum {
+	A_DB_MYSQL = 0,
+	A_DB_PGSQL
+} database_type_t;
+/**
  * @typedef	agent_t
  * @abstract	Main structure of the Arkiv agent.
  * @field	exec_timestamp		Unix timestamp of execution start.
@@ -278,7 +298,8 @@ typedef enum {
  * @field	datetime_chunk_path	Date and time string.
  * @field	backup_path		Real path to the backup directory.
  * @field	backup_files_path	Path to the files backup directory.
- * @field	backup_databases_path	Path to the databases backup directory.
+ * @field	backup_mysql_path	Path to the MySQL databases backup directory.
+ * @field	backup_pgsql_path	Path to the PostgreSQL databases backup directory.
  * @field	conf.logfile		Log file's path.
  * @field	conf.archives_path	Root path to the local archives directory.
  * @field	conf.org_key		Organization key.
@@ -286,12 +307,14 @@ typedef enum {
  * @field	conf.crypt_pwd		Encryption password.
  * @field	conf.use_syslog		True if syslog is used.
  * @field	conf.use_stdout		True when log must be written on STDOUT.
+ * @field	conf.use_ansi		False to disable ANSI escape sequences in log messages.
  * @field	bin.tar			Path to the tar program.
  * @field	bin.z			Path to the compression program.
  * @field	bin.crypt		Path to the encryption program.
  * @field	bin.checksum		Path to sha512sum.
  * @field	bin.mysqldump		Path to mysqldump.
  * @field	bin.pg_dump		Path to pg_dump.
+ * @field	bin.pg_dumpall		Path to pg_dumpall.
  * @field	param.org_name		Organization name.
  * @field	param.encryption	Encryption algorithm.
  * @field	param.compression	Compression algorithm.
@@ -309,7 +332,8 @@ typedef enum {
  * @field	param.storage_env	List of environment variables for the storage setting.
  * @field	log.status		Global execution status.
  * @field	log.backup_files	List of backed up files, with a status.
- * @field	log.backup_databases	List of backup up databases, with a status.
+ * @field	log.backup_mysql	List of backed up MySQL databases, with a status.
+ * @field	log.backup_pgsql	List of backed up PostgreSQL databases, with a status.
  * @field	log.upload_s3		List of S3 uploads, with a status.
  */
 typedef struct agent_s {
@@ -321,7 +345,8 @@ typedef struct agent_s {
 	ystr_t datetime_chunk_path;
 	ystr_t backup_path;
 	ystr_t backup_files_path;
-	ystr_t backup_databases_path;
+	ystr_t backup_mysql_path;
+	ystr_t backup_pgsql_path;
 	struct {
 		ystr_t logfile;
 		ystr_t archives_path;
@@ -330,6 +355,7 @@ typedef struct agent_s {
 		ystr_t crypt_pwd;
 		bool use_syslog;
 		bool use_stdout;
+		bool use_ansi;
 	} conf;
 	struct {
 		ystr_t find;
@@ -339,6 +365,7 @@ typedef struct agent_s {
 		ystr_t checksum;
 		ystr_t mysqldump;
 		ystr_t pg_dump;
+		ystr_t pg_dumpall;
 	} bin;
 	struct {
 		ystr_t org_name;
@@ -361,8 +388,13 @@ typedef struct agent_s {
 	struct {
 		ytable_t *pre_scripts;
 		ytable_t *backup_files;
-		ytable_t *backup_databases;
+		ytable_t *backup_mysql;
+		ytable_t *backup_pgsql;
 		ytable_t *post_scripts;
+		bool status_pre_scripts;
+		bool status_files;
+		bool status_databases;
+		bool status_post_scripts;
 	} exec_log;
 } agent_t;
 

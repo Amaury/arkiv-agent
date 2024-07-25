@@ -740,6 +740,23 @@ ystr_t ys_filenamize_path(char *str, char *slash_replacement) {
 		ys_addc(&res, MINUS);
 	return (res);
 }
+/* Create a copy of a string, without ANSI escape sequences. */
+ystr_t ys_clean_ansi(const char *str) {
+	const char *pt;
+	ystr_t res;
+
+	if (!str || !(res = ys_new("")))
+		return (NULL);
+	for (pt = str; *pt; ++pt) {
+		if (*pt != '\x1b') {
+			ys_addc(&res, *pt);
+			continue;
+		}
+		while (*pt != 'm')
+			++pt;
+	}
+	return (res);
+}
 /* Adds quotes before and after a string, and adds backslashes before quotes in the string. */
 ystr_t ys_escape_shell_arg(char *str) {
 	char *pt;

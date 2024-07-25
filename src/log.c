@@ -9,11 +9,13 @@
 void alog(agent_t *agent, bool debug, bool show_time, const char *str, ...) {
 	va_list plist, plist2, plist3;
 	char buffer[4096];
+	ystr_t ansi_free = NULL;
 
 	if (!agent || (!agent->log_fd && !agent->conf.use_stdout && !agent->conf.use_syslog) ||
 	    (debug && !agent->debug_mode)) {
 		return;
 	}
+	// creation of the log string
 	va_start(plist, str);
 	va_copy(plist2, plist);
 	va_copy(plist3, plist);
@@ -44,20 +46,27 @@ void alog(agent_t *agent, bool debug, bool show_time, const char *str, ...) {
 	size_t len = strlen(buffer);
 	char *pt = buffer + len;
 	snprintf(pt, sizeof(buffer) - len, "%s\n", str);
+	// check if an ANSI-free string is needed
+	if (!agent->conf.use_ansi || agent->conf.use_syslog)
+		ansi_free = ys_clean_ansi(buffer);
+	// write to file
 	if (agent->log_fd) {
-		vfprintf(agent->log_fd, buffer, plist);
+		vfprintf(agent->log_fd, (agent->conf.use_ansi ? buffer : ansi_free), plist);
 		fflush(agent->log_fd);
 	}
+	// write to stdout
 	if (agent->conf.use_stdout) {
-		vfprintf(stdout, buffer, plist2);
+		vfprintf(stdout, (agent->conf.use_ansi ? buffer : ansi_free), plist2);
 		fflush(stdout);
 	}
+	// write to syslog
 	if (agent->conf.use_syslog) {
-		vsyslog(LOG_NOTICE, buffer, plist3);
+		vsyslog(LOG_NOTICE, ansi_free, plist3);
 	}
 	va_end(plist);
 	va_end(plist2);
 	va_end(plist3);
+	ys_free(ansi_free);
 }
 /* Creates a log entry for a pre-script execution. */
 log_script_t *log_create_pre_script(agent_t *agent, ystr_t command) {
@@ -95,39 +104,36 @@ log_item_t *log_create_file(agent_t *agent, ystr_t path) {
 	ytable_add(agent->exec_log.backup_files, log);
 	return (log);
 }
-
-#if 0
-/* Add a log item entry for a backed up file. */
-void log_file_backup(agent_t *agent, char *filename, char *tarname, ystatus_t status,
-                     ystatus_t compress_status, ystatus_t encrypt_status) {
-	log_item_t *item = malloc0(sizeof(log_item_t));
-	if (!item)
-		return;
-	item->orig_path = strdup(filename);
-	item->result_path = strdup(tarname);
-	item->status = status;
-	yarray_add(&agent->exec_log.backup_files, item);
+/* Creates a log entry for a MySQL database backup. */
+log_item_t *log_create_mysql(agent_t *agent, ystr_t dbname) {
+	log_item_t *log = malloc0(sizeof(log_item_t));
+	if (!log)
+		return (NULL);
+	log->type = A_ITEM_TYPE_MYSQL;
+	log->item = dbname;
+	log->success = true;
+	log->dump_status = YEUNDEF;
+	log->compress_status = YEUNDEF;
+	log->encrypt_status = YEUNDEF;
+	log->checksum_status = YEUNDEF;
+	log->upload_status = YEUNDEF;
+	ytable_add(agent->exec_log.backup_mysql, log);
+	return (log);
 }
-/* Add a log item entry for a backed up database. */
-void log_database_backup(agent_t *agent, char *db, char *tarname, ystatus_t status,
-                         ystatus_t compress_status, ystatus_t encrypt_status) {
-	log_item_t *item = malloc0(sizeof(log_item_t));
-	if (!item)
-		return;
-	item->orig_path = strdup(db);
-	item->result_path = strdup(tarname);
-	item->status = status;
-	yarray_add(&agent->exec_log.backup_databases, item);
+/* Creates a log entry for a PostgreSQL database backup. */
+log_item_t *log_create_pgsql(agent_t *agent, ystr_t dbname) {
+	log_item_t *log = malloc0(sizeof(log_item_t));
+	if (!log)
+		return (NULL);
+	log->type = A_ITEM_TYPE_PGSQL;
+	log->item = dbname;
+	log->success = true;
+	log->dump_status = YEUNDEF;
+	log->compress_status = YEUNDEF;
+	log->encrypt_status = YEUNDEF;
+	log->checksum_status = YEUNDEF;
+	log->upload_status = YEUNDEF;
+	ytable_add(agent->exec_log.backup_pgsql, log);
+	return (log);
 }
-/* Add a log item entry for a S3 upload. */
-void log_s3_upload(agent_t *agent, char *local, char *distant, ystatus_t status) {
-	log_item_t *item = malloc0(sizeof(log_item_t));
-	if (!item)
-		return;
-	item->orig_path = strdup(local);
-	item->result_path = strdup(distant);
-	item->status = status;
-	yarray_add(&agent->exec_log.upload_s3, item);
-}
-#endif
 

@@ -48,7 +48,8 @@ typedef struct {
 typedef struct {
 	enum {
 		A_ITEM_TYPE_FILE = 0,
-		A_ITEM_TYPE_DATABASE
+		A_ITEM_TYPE_MYSQL,
+		A_ITEM_TYPE_PGSQL
 	} type;
 	ystr_t item;
 	ystr_t archive_name;
@@ -97,40 +98,20 @@ log_script_t *log_create_post_script(agent_t *agent, ystr_t command);
  * @return	A pointer to the created log entry.
  */
 log_item_t *log_create_file(agent_t *agent, ystr_t path);
-
-#if 0
 /**
- * @function	log_file_backup
- *		Add a log item entry for a backed up file.
- * @param	agent		Pointer to the agent structure.
- * @param	filename	Name of the backed up file (copied).
- * @param	tarname		Path to the tar'ed file (copied).
- * @param	status		Status of the backup.
- * @param	compress_status	Compression status.
- * @param	encrypt_status	Encryption status.
- */
-void log_file_backup(agent_t *agent, char *filename, char *tarname, ystatus_t status,
-                     ystatus_t compress_status, ystatus_t encrypt_status);
-/**
- * @function	log_database_backup
- *		Add a log item entry for a backed up database.
+ * @function	log_create_mysql
+ * @abstract	Creates a log entry for a MySQL database backup.
  * @param	agent	Pointer to the agent structure.
- * @param	db	Name of the backed up database (copied).
- * @param	tarname	Path to the tar'ed file (copied).
- * @param	status	Status of the backup.
- * @param	compress_status	Compression status.
- * @param	encrypt_status	Encryption status.
+ * @param	dbname	Name of the database.
+ * @return	A pointer to the created log entry.
  */
-void log_database_backup(agent_t *agent, char *db, char *tarname, ystatus_t status,
-                         ystatus_t compress_status, ystatus_t encrypt_status);
+log_item_t *log_create_mysql(agent_t *agent, ystr_t dbname);
 /**
- * @function	log_s3_upload
- *		Add a log item entry for a S3 upload.
+ * @function	log_create_pgsql
+ * @abstract	Creates a log entry for a PostgreSQL database backup.
  * @param	agent	Pointer to the agent structure.
- * @param	local	Path of the local file (copied).
- * @param	distant	Path of the file on S3 (copied).
- * @param	status	Status of the upload.
+ * @param	dbname	Name of the database.
+ * @return	A pointer to the created log entry.
  */
-void log_s3_upload(agent_t *agent, char *local, char *distant, ystatus_t status);
-#endif
+log_item_t *log_create_pgsql(agent_t *agent, ystr_t dbname);
 

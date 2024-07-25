@@ -11,7 +11,7 @@
 /* Upload backed up files to cloud storage. */
 void upload_files(agent_t *agent) {
 	ystatus_t st_files = YENOERR;
-	ystatus_t st_databases = YENOERR;
+	ystatus_t st_mysql = YENOERR, st_pgsql = YENOERR;
 	ytable_function_t upload_callback = NULL;
 
 	ALOG("Upload files to " YANSI_FAINT "%s" YANSI_RESET, agent->param.storage_name);
@@ -41,21 +41,27 @@ void upload_files(agent_t *agent) {
 	}
 
 	// upload backed up files
-	if (agent->exec_log.backup_files && !ytable_empty(agent->exec_log.backup_files)) {
+	if (!ytable_empty(agent->exec_log.backup_files)) {
 		ADEBUG("├ " YANSI_FAINT "Upload backed up files" YANSI_RESET);
 		st_files = ytable_foreach(agent->exec_log.backup_files, upload_callback, agent);
 		if (st_files == YENOERR)
 			ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
 	}
 	// upload backed up databases
-	if (agent->exec_log.backup_databases && !ytable_empty(agent->exec_log.backup_databases)) {
-		ADEBUG("├ " YANSI_FAINT "Upload backed up databases" YANSI_RESET);
-		st_databases = ytable_foreach(agent->exec_log.backup_databases, upload_callback, agent);
-		if (st_databases == YENOERR)
+	if (!ytable_empty(agent->exec_log.backup_mysql)) {
+		ADEBUG("├ " YANSI_FAINT "Upload backed up MySQL databases" YANSI_RESET);
+		st_mysql = ytable_foreach(agent->exec_log.backup_mysql, upload_callback, agent);
+		if (st_mysql == YENOERR)
+			ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
+	}
+	if (!ytable_empty(agent->exec_log.backup_pgsql)) {
+		ADEBUG("├ " YANSI_FAINT "Upload backed up PostgreSQL databases" YANSI_RESET);
+		st_pgsql = ytable_foreach(agent->exec_log.backup_pgsql, upload_callback, agent);
+		if (st_pgsql == YENOERR)
 			ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
 	}
 	// log
-	if (st_files == YENOERR && st_databases == YENOERR)
+	if (st_files == YENOERR && st_mysql == YENOERR && st_pgsql == YENOERR)
 		ALOG("└ " YANSI_GREEN "Done" YANSI_RESET);
 	else
 		ALOG("└ " YANSI_RED "Error" YANSI_RESET);
@@ -133,6 +139,8 @@ static ystatus_t upload_item_aws_s3(uint64_t hash, char *key, void *data, void *
 	ystr_t root_path = NULL;
 	ystr_t dest_path = NULL;
 
+	if (!item->success)
+		return (YENOERR);
 	ADEBUG("│ ├ " YANSI_FAINT "Upload file " YANSI_RESET "%s", item->archive_path);
 	// bucket
 	bucket = yvar_get_string(ytable_get_key_data(agent->param.storage, A_PARAM_KEY_BUCKET));

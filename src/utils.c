@@ -191,19 +191,19 @@ config_crontab_t check_cron(void) {
 /* Check if database dump programs (mysqldump, pg_dump) are installed. */
 void check_database_dump(void) {
 	bool hasMysqldump = check_program_exists("mysqldump");
-	bool hasPgdump = check_program_exists("pg_dump");
+	bool hasPgdump = check_program_exists("pg_dump") && check_program_exists("pg_dumpall");
 	if (hasMysqldump && hasPgdump)
 		return;
 	if (!hasMysqldump && !hasPgdump) {
 		printf("There is no database dump program installed.\n"
 		       "You will not be able to back up any MySQL or Postgresql database.\n");
 	} else if (!hasMysqldump) {
-		printf("You have " YANSI_FAINT "pg_dump" YANSI_RESET " installed, but not "
-		       YANSI_FAINT "mysqldump" YANSI_RESET ".\n"
+		printf("You have " YANSI_FAINT "pg_dump" YANSI_RESET "/" YANSI_FAINT "pg_dumpall" YANSI_RESET
+		       " installed, but not " YANSI_FAINT "mysqldump" YANSI_RESET ".\n"
 		       "Therefore, you will be able to back up PostgreSQL databases but not MySQL databases.\n");
 	} else {
 		printf("You have " YANSI_FAINT "mysqldump" YANSI_RESET " installed, but not "
-		       YANSI_FAINT "pg_dump" YANSI_RESET ".\n"
+		       YANSI_FAINT "pg_dump" YANSI_RESET "/" YANSI_FAINT "pg_dumpall" YANSI_RESET ".\n"
 		       "Therefore, you will be able to back up MySQL databases but not PostgreSQL databases.\n");
 	}
 	printf("Do you want to continue? [" YANSI_YELLOW "Y" YANSI_RESET "/" YANSI_YELLOW "n" YANSI_RESET "] " YANSI_BLUE);

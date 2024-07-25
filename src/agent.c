@@ -50,6 +50,10 @@ agent_t *agent_new(char *exe_path) {
 		agent->conf.use_stdout = true;
 	}
 	ys_free(ys);
+	// manage ANSI parameter
+	ys = agent_getenv(A_ENV_ANSI, NULL);
+	agent->conf.use_ansi = !ys || !ys[0] || !STR_IS_FALSE(ys);
+	ys_free(ys);
 	/*
 	agent->log.backup_files = yarray_new();
 	agent->log.backup_databases = yarray_new();
@@ -101,15 +105,22 @@ ystr_t agent_getenv_static(char *envvar, const char *default_value) {
 void agent_load_configuration(agent_t *agent) {
 	ystr_t ys = NULL;
 
+	// init
 	agent->exec_log.pre_scripts = ytable_new();
 	agent->exec_log.backup_files = ytable_new();
-	agent->exec_log.backup_databases = ytable_new();
+	agent->exec_log.backup_mysql = ytable_new();
+	agent->exec_log.backup_pgsql = ytable_new();
 	agent->exec_log.post_scripts = ytable_new();
 	if (!agent->exec_log.pre_scripts || !agent->exec_log.backup_files ||
-	    !agent->exec_log.backup_databases || !agent->exec_log.post_scripts) {
+	    !agent->exec_log.backup_mysql || !agent->exec_log.backup_pgsql ||
+	    !agent->exec_log.post_scripts) {
 		printf(YANSI_RED "Memory allocation error\n" YANSI_RESET);
 		exit(3);
 	}
+	agent->exec_log.status_pre_scripts = true;
+	agent->exec_log.status_files = true;
+	agent->exec_log.status_databases = true;
+	agent->exec_log.status_post_scripts = true;
 	// read the configuration file
 	ys = yfile_get_string_contents(agent->conf_path);
 	// parsing the configuration file

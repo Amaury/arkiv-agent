@@ -1,6 +1,7 @@
 #include <time.h>
 #include <inttypes.h>
 #include <stdlib.h>
+#include <stdio.h>
 #include "yansi.h"
 #include "ytable.h"
 #include "yvar.h"
@@ -47,6 +48,7 @@ void exec_backup(agent_t *agent) {
 	// get database dump programs path
 	agent->bin.mysqldump = get_program_path("mysqldump");
 	agent->bin.pg_dump = get_program_path("pg_dump");
+	agent->bin.pg_dumpall = get_program_path("pg_dumpall");
 	// check rclone
 	if (!yfile_is_executable(A_EXE_RCLONE)) {
 		ALOG("Search local programs");
@@ -66,8 +68,7 @@ void exec_backup(agent_t *agent) {
 	ALOG("└ " YANSI_GREEN "Done" YANSI_RESET);
 
 	/* purge old local archives */
-	st = backup_purge_local(agent);
-	if (st != YENOERR) {
+	if (backup_purge_local(agent) != YENOERR) {
 		ALOG(YANSI_BG_RED "Abort" YANSI_RESET);
 		return;
 	}
@@ -302,7 +303,7 @@ static ystatus_t backup_fetch_params(agent_t *agent) {
 	yvar_t *schedule = yvar_get_from_path(var_ptr, varpath);
 	ys_free(varpath);
 	if (!schedule) {
-		ALOG("└ " YANSI_FAINT "No backup scheduled for this day/time" YANSI_RESET);
+		ALOG("├ " YANSI_FAINT "No backup scheduled for this day/time" YANSI_RESET);
 		return (YEAGAIN);
 	}
 	ADEBUG("│ └ " YANSI_FAINT "Schedule found" YANSI_RESET);
@@ -377,14 +378,14 @@ static ystatus_t backup_fetch_params(agent_t *agent) {
 	var_ptr2 = yvar_get_from_path(savepack, A_PARAM_PATH_MYSQL);
 	if (var_ptr2 && yvar_is_table(var_ptr2)) {
 		agent->param.mysql = yvar_get_table(var_ptr2);
-		ADEBUG("│ ├ %d" YANSI_FAINT " MySQL database(s)" YANSI_RESET, ytable_length(agent->param.databases));
+		ADEBUG("│ ├ %d" YANSI_FAINT " MySQL database(s)" YANSI_RESET, ytable_length(agent->param.mysql));
 	} else
 		ADEBUG("│ ├ " YANSI_FAINT "No MySQL database" YANSI_RESET);
 	// get PostgreSQL databases
 	var_ptr2 = yvar_get_from_path(savepack, A_PARAM_PATH_PGSQL);
 	if (var_ptr2 && yvar_is_table(var_ptr2)) {
 		agent->param.pgsql = yvar_get_table(var_ptr2);
-		ADEBUG("│ ├ %d" YANSI_FAINT " PostgreSQL database(s)" YANSI_RESET, ytable_length(agent->param.databases));
+		ADEBUG("│ ├ %d" YANSI_FAINT " PostgreSQL database(s)" YANSI_RESET, ytable_length(agent->param.pgsql));
 	} else
 		ADEBUG("│ ├ " YANSI_FAINT "No PostgreSQL database" YANSI_RESET);
 	// get files
@@ -472,64 +473,75 @@ static ystatus_t backup_exec_scripts(agent_t *agent, script_type_t type) {
 }
 /* Execute a pre-script. */
 static ystatus_t backup_exec_pre_script(uint64_t hash, char *key, void *data, void *user_data) {
+	ystatus_t status = YENOERR;
 	yvar_t *var_script = (yvar_t*)data;
 	agent_t *agent = user_data;
 	ystr_t command;
-	log_script_t *log;
+	log_script_t *log = NULL;
 
 	// checks
 	if (!yvar_is_string(var_script) || !(command = yvar_get_string(var_script))) {
 		ALOG("└ " YANSI_RED "Failed (bad parameter)" YANSI_RESET "\n");
-		return (YEBADCONF);
+		status = YEBADCONF;
+		goto cleanup;
 	}
 	ALOG("├ " YANSI_FAINT "Execution of " YANSI_RESET "%s", command);
 	// creation of the log entry
 	if (!(log = log_create_pre_script(agent, command))) {
 		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
-		return (YENOMEM);
+		status = YENOMEM;
+		goto cleanup;
 	}
 	// script execution
 	int ret_val = system(command);
 	if (ret_val == -1 || !WIFEXITED(ret_val) || WEXITSTATUS(ret_val)) {
 		ADEBUG("│ └ " YANSI_RED "Failed (returned value " YANSI_RESET "%d" YANSI_RED ")" YANSI_RESET, WEXITSTATUS(ret_val));
-		log->success = false;
-		return (YEFAULT);
+		status = YEFAULT;
+		goto cleanup;
 	}
 	ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
-	return (YENOERR);
+cleanup:
+	if (status != YENOERR)
+		agent->exec_log.status_pre_scripts = false;
+	if (log)
+		log->success = (status == YENOERR) ? true : false;
+	return (status);
 }
 /* Execute a post-script. */
 static ystatus_t backup_exec_post_script(uint64_t hash, char *key, void *data, void *user_data) {
+	ystatus_t status = YENOERR;
 	yvar_t *var_script = (yvar_t*)data;
 	agent_t *agent = user_data;
 	ystr_t command;
-	log_script_t *log;
+	log_script_t *log = NULL;
 
 	// checks
 	if (!yvar_is_string(var_script) || !(command = yvar_get_string(var_script))) {
 		ALOG("└ " YANSI_RED "Failed (bad parameter)" YANSI_RESET "\n");
-		return (YEBADCONF);
+		status = YEBADCONF;
+		goto cleanup;
 	}
 	ALOG("├ " YANSI_FAINT "Execution of " YANSI_RESET "%s", command);
 	// creation of the log entry
 	if (!(log = log_create_post_script(agent, command))) {
 		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
-		return (YENOMEM);
+		status = YENOMEM;
+		goto cleanup;
 	}
 	// script execution
 	int ret_val = system(command);
 	if (ret_val) {
 		ADEBUG("│ └ " YANSI_RED "Failed (returned value " YANSI_RESET "%d" YANSI_RED ")" YANSI_RESET, ret_val);
-		log->success = false;
-		return (YEFAULT);
+		status = YEFAULT;
+		goto cleanup;
 	}
 	ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
-	return (YENOERR);
-}
-/* Backup all listed databases. They are tar'ed and compressed. */
-static void backup_databases(agent_t *agent) {
-	ystatus_t st;
-
+cleanup:
+	if (status != YENOERR)
+		agent->exec_log.status_post_scripts = false;
+	if (log)
+		log->success = (status == YENOERR) ? true : false;
+	return (status);
 }
 /* Backup all listed files. They are tar'ed and compressed. */
 static void backup_files(agent_t *agent) {
@@ -571,14 +583,16 @@ static ystatus_t backup_file(uint64_t hash, char *key, void *data, void *user_da
 	// checks
 	if (!yvar_is_string(var_file_path) || !(file_path = yvar_get_string(var_file_path))) {
 		ALOG("└ " YANSI_RED "Failed (bad parameter)" YANSI_RESET);
-		return (YEBADCONF);
+		status = YEBADCONF;
+		goto cleanup;
 	}
 	// log message
 	ALOG("├ " YANSI_FAINT "Backup path " YANSI_RESET "%s", file_path);
 	// creation of the log entry
 	if (!(log = log_create_file(agent, file_path))) {
 		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
-		return (YENOMEM);
+		status = YENOMEM;
+		goto cleanup;
 	}
 	// remove '/' at the beginning of the path to save, and call tar with "-C /" options
 	// to avoid the warning "Removing leading `/' from member names"
@@ -586,14 +600,12 @@ static ystatus_t backup_file(uint64_t hash, char *key, void *data, void *user_da
 	while (*path == '/')
 		path++;
 	// create tar command
-	if (!(filename = ys_filenamize(path)) ||
+	if (!(filename = ys_filenamize_path(path, ",")) ||
 	    !(log->archive_name = ys_printf(NULL, "%s.tar", filename)) ||
 	    !(log->archive_path = ys_printf(NULL, "%s/%s", agent->backup_files_path, log->archive_name)) ||
 	    !(args = yarray_create(9))) {
 		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
-		status = YENOMEM;
-		log->dump_status = status;
-		log->success = false;
+		status = log->dump_status = YENOMEM;
 		goto cleanup;
 	}
 	yarray_push_multi(
@@ -615,83 +627,331 @@ static ystatus_t backup_file(uint64_t hash, char *key, void *data, void *user_da
 	if (status != YENOERR) {
 		ALOG("│ └ " YANSI_RED "Tar error" YANSI_RESET);
 		log->dump_status = status;
-		log->success = false;
 		goto cleanup;
 	}
 	// set log status
 	log->dump_status = YENOERR;
-	// check if a compression is needed
-	if (agent->param.compression == A_COMP_NONE) {
-		ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
-		goto cleanup;
-	}
-	// create compression command
-	yarray_free(args);
-	if (!(args = yarray_create(4))) {
-		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
-		status = YENOMEM;
-		log->compress_status = status;
-		log->success = false;
-		goto cleanup;
-	}
-	if (agent->param.compression == A_COMP_ZSTD)
-		yarray_push(&args, "--rm");
-	yarray_push_multi(&args, 3, "--quiet", "--force", log->archive_path);
-	// execution
-	ADEBUG("│ ├ " YANSI_FAINT "Compress file " YANSI_RESET "%s/%s.tar", agent->backup_path, filename);
-	status = yexec(agent->bin.z, args, NULL, NULL, NULL);
-	if (status != YENOERR) {
-		ALOG("│ └ " YANSI_RED "Compression error" YANSI_RESET);
-		log->compress_status = status;
-		log->success = false;
-		goto cleanup;
-	}
-	ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
-	// set log status
-	log->compress_status = YENOERR;
-	// definitive paths
-	char *ext = NULL;
-	if (agent->param.compression == A_COMP_GZIP)
-		ext = "gz";
-	else if (agent->param.compression == A_COMP_BZIP2)
-		ext = "bz2";
-	else if (agent->param.compression == A_COMP_XZ)
-		ext = "xz";
-	else if (agent->param.compression == A_COMP_ZSTD)
-		ext = "zst";
-	ystr_t z_name = ys_printf(NULL, "%s.%s", log->archive_name, ext);
-	if (!z_name) {
-		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
-		status = YENOMEM;
-		log->compress_status = status;
-		log->success = false;
-		goto cleanup;
-	}
-	ys_free(log->archive_name);
-	log->archive_name = z_name;
-	ystr_t z_path = ys_printf(NULL, "%s.%s", log->archive_path, ext);
-	if (!z_path) {
-		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
-		status = YENOMEM;
-		log->compress_status = status;
-		log->success = false;
-		goto cleanup;
-	}
-	ys_free(log->archive_path);
-	log->archive_path = z_path;
+	// compression of the file
+	status = backup_compress_file(agent, log);
 cleanup:
+	if (status != YENOERR)
+		agent->exec_log.status_files = false;
+	if (log)
+		log->success = (status == YENOERR) ? true : false;
 	ys_free(filename);
 	yarray_free(args);
+	return (status);
+}
+/* Backup all listed databases. They are tar'ed and compressed. */
+static void backup_databases(agent_t *agent) {
+	ystatus_t st_mysql = YENOERR, st_pgsql = YENOERR;
+
+	/* MySQL */
+	if (ytable_length(agent->param.mysql)) {
+		// log message
+		ALOG("Backup MySQL databases");
+		// check if mysqldump is available
+		if (!agent->bin.mysqldump) {
+			ALOG("└ " YANSI_YELLOW "Error" YANSI_RESET " mysqldump " YANSI_YELLOW "is not installed" YANSI_RESET);
+			st_mysql = YENOEXEC;
+		} else {
+			// create output subdirectory
+			agent->backup_mysql_path = ys_printf(NULL, "%s/mysql", agent->backup_path);
+			if (!agent->backup_mysql_path) {
+				ALOG("└ " YANSI_RED "Memory allocation error" YANSI_RESET);
+				return;
+			}
+			ADEBUG("├ " YANSI_FAINT "Create directory " YANSI_RESET "%s", agent->backup_mysql_path);
+			if (!yfile_mkpath(agent->backup_mysql_path, 0700)) {
+				ALOG("└ " YANSI_RED "Failed" YANSI_RESET);
+				return;
+			}
+			// dump databases
+			st_mysql = ytable_foreach(agent->param.mysql, backup_mysql, agent);
+			if (st_mysql == YENOERR)
+				ALOG("└ " YANSI_GREEN "Done" YANSI_RESET);
+			else if (st_mysql != YEBADCONF)
+				ALOG("└ " YANSI_YELLOW "Error" YANSI_RESET);
+		}
+	}
+	/* PostgreSQL */
+	if (ytable_length(agent->param.pgsql)) {
+		// log message
+		ALOG("Backup PostgreSQL databases");
+		// check if pg_dump is available
+		if (!agent->bin.mysqldump) {
+			ALOG("└ " YANSI_YELLOW "Error" YANSI_RESET " mysqldump " YANSI_YELLOW "is not installed" YANSI_RESET);
+			st_pgsql = YENOEXEC;
+		} else {
+			// create output subdirectory
+			agent->backup_pgsql_path = ys_printf(NULL, "%s/postgresql", agent->backup_path);
+			if (!agent->backup_pgsql_path) {
+				ALOG("└ " YANSI_RED "Memory allocation error" YANSI_RESET);
+				return;
+			}
+			ADEBUG("├ " YANSI_FAINT "Create directory " YANSI_RESET "%s", agent->backup_pgsql_path);
+			if (!yfile_mkpath(agent->backup_pgsql_path, 0700)) {
+				ALOG("└ " YANSI_RED "Failed" YANSI_RESET);
+				return;
+			}
+			// dump databases
+			st_pgsql = ytable_foreach(agent->param.pgsql, backup_pgsql, agent);
+			if (st_pgsql == YENOERR)
+				ALOG("└ " YANSI_GREEN "Done" YANSI_RESET);
+			else if (st_pgsql != YEBADCONF)
+				ALOG("└ " YANSI_YELLOW "Error" YANSI_RESET);
+		}
+	}
+	// database status
+	agent->exec_log.status_databases = (st_mysql == YENOERR && st_pgsql == YENOERR) ? true : false;
+}
+/* Backup a MySQL database. */
+static ystatus_t backup_mysql(uint64_t hash, char *key, void *data, void *user_data) {
+	ystatus_t status = YENOERR;
+	yvar_t *var_db_data = (yvar_t*)data;
+	agent_t *agent = (agent_t*)user_data;
+	ytable_t *db_data = NULL;
+	log_item_t *log = NULL;
+	bool all_databases = false;
+	ystr_t dbname = NULL;
+	ystr_t dbuser = NULL;
+	ystr_t dbpwd = NULL;
+	ystr_t dbhost = NULL;
+	int64_t dbport = 0;
+	ystr_t dbport_str = NULL;
+	ystr_t filename = NULL;
+	ystr_t password_env = NULL;
+	yarray_t args = NULL;
+	yarray_t env = NULL;
+	char *tmp_file = NULL;
+
+	// check mysqldump
+	if (!agent->bin.mysqldump) {
+		ALOG("└ " YANSI_RED "Failed (mysqldump not installed)" YANSI_RESET);
+		status = YENOEXEC;
+		goto cleanup;
+	}
+	// extract parameters and check them
+	if (!yvar_is_table(var_db_data) || !(db_data = yvar_get_table(var_db_data)) ||
+	    !(dbname = yvar_get_string(ytable_get_key_data(db_data, A_PARAM_KEY_DB))) ||
+	    !(dbuser = yvar_get_string(ytable_get_key_data(db_data, A_PARAM_KEY_USER))) ||
+	    !(dbpwd = yvar_get_string(ytable_get_key_data(db_data, A_PARAM_KEY_PWD))) ||
+	    !(dbhost = yvar_get_string(ytable_get_key_data(db_data, A_PARAM_KEY_HOST))) ||
+	    !(dbport = yvar_get_int(ytable_get_key_data(db_data, A_PARAM_KEY_PORT)))) {
+		ALOG("└ " YANSI_RED "Failed (bad parameter)" YANSI_RESET);
+		status = YEBADCONF;
+		goto cleanup;
+	}
+	if (!strcmp(dbname, A_DB_ALL_DATABASES_DEFINITION))
+		all_databases = true;
+	// log message
+	ALOG("├ " YANSI_FAINT "Database " YANSI_RESET "%s", dbname);
+	// creation of the log entry
+	if (!(log = log_create_mysql(agent, dbname))) {
+		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
+		status = YENOMEM;
+		goto cleanup;
+	}
+	log->success = true;
+	// create mysqldump command
+	if (all_databases)
+		filename = ys_new(A_DB_ALL_DATABASES_FILENAME);
+	else
+		filename = ys_filenamize(dbname);
+	if (!filename ||
+	    !(log->archive_name = ys_printf(NULL, "%s.sql", filename)) ||
+	    !(log->archive_path = ys_printf(NULL, "%s/%s", agent->backup_mysql_path, log->archive_name)) ||
+	    !(dbport_str = ys_printf(NULL, "%d", (int)dbport)) ||
+	    !(password_env = ys_printf(NULL, "MYSQL_PWD=%s", dbpwd)) ||
+	    !(args = yarray_create(11)) ||
+	    !(env = yarray_create(1))) {
+		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
+		status = log->dump_status = YENOMEM;
+		goto cleanup;
+	}
+	if (!(tmp_file = yfile_tmp("/tmp/arkiv-mysqldump_result"))) {
+		ALOG("│ └ " YANSI_RED "Unable to create temporary file" YANSI_RESET);
+		status = log->dump_status = YEIO;
+		goto cleanup;
+	}
+	yarray_push(&env, password_env);
+	yarray_push_multi(
+		&args,
+		11,
+		"-u",
+		dbuser,
+		"--single-transaction",
+		"--no-tablespaces",
+		"--skip-lock-tables",
+		"--routines",
+		"-h",
+		dbhost,
+		"-P",
+		dbport_str,
+		(all_databases ? "-A" : dbname)
+	);
+	// execution
+	ADEBUG("│ ├ " YANSI_FAINT "Execute " YANSI_RESET "mysqldump" YANSI_FAINT " to " YANSI_RESET "%s", log->archive_path);
+	status = yexec(agent->bin.mysqldump, args, env, NULL, tmp_file);
+	if (status != YENOERR) {
+		ALOG("│ └ " YANSI_RED "Mysqldump error" YANSI_RESET);
+		log->dump_status = status;
+		unlink(tmp_file);
+		goto cleanup;
+	}
+	// set log status
+	log->dump_status = YENOERR;
+	// move the file to its destination
+	if (rename(tmp_file, log->archive_path)) {
+		ALOG("│ └ " YANSI_RED "Unable to move file " YANSI_RESET "%s" YANSI_RED " to " YANSI_RED "%s" YANSI_RESET, tmp_file, log->archive_path);
+		status = log->dump_status = YEIO;
+		unlink(tmp_file);
+		goto cleanup;
+	}
+	// compression of the file
+	status = backup_compress_file(agent, log);
+cleanup:
+	if (status != YENOERR)
+		agent->exec_log.status_databases = false;
+	if (log)
+		log->success = (status == YENOERR) ? true : false;
+	ys_free(filename);
+	ys_free(password_env);
+	ys_free(dbport_str);
+	yarray_free(args);
+	yarray_free(env);
+	free0(tmp_file);
+	return (status);
+}
+/* Backup a PostgreSQL database. */
+static ystatus_t backup_pgsql(uint64_t hash, char *key, void *data, void *user_data) {
+	ystatus_t status = YENOERR;
+	yvar_t *var_db_data = (yvar_t*)data;
+	agent_t *agent = (agent_t*)user_data;
+	ytable_t *db_data = NULL;
+	log_item_t *log = NULL;
+	bool all_databases = false;
+	ystr_t dbname = NULL;
+	ystr_t dbuser = NULL;
+	ystr_t dbpwd = NULL;
+	ystr_t dbhost = NULL;
+	int64_t dbport = 0;
+	ystr_t dbport_str = NULL;
+	ystr_t filename = NULL;
+	ystr_t password_env = NULL;
+	yarray_t args = NULL;
+	yarray_t env = NULL;
+	char *tmp_file = NULL;
+
+	// check mysqldump
+	if (!agent->bin.mysqldump) {
+		ALOG("└ " YANSI_RED "Failed (pg_dump/pg_dumpall not installed)" YANSI_RESET);
+		status = YENOEXEC;
+		goto cleanup;
+	}
+	// extract parameters and check them
+	if (!yvar_is_array(var_db_data) || !(db_data = yvar_get_table(var_db_data)) ||
+	    !(dbname = yvar_get_string(ytable_get_key_data(db_data, A_PARAM_KEY_DB))) ||
+	    !(dbuser = yvar_get_string(ytable_get_key_data(db_data, A_PARAM_KEY_USER))) ||
+	    !(dbpwd = yvar_get_string(ytable_get_key_data(db_data, A_PARAM_KEY_USER))) ||
+	    !(dbhost = yvar_get_string(ytable_get_key_data(db_data, A_PARAM_KEY_HOST))) ||
+	    !(dbport = yvar_get_int(ytable_get_key_data(db_data, A_PARAM_KEY_PORT)))) {
+		ALOG("└ " YANSI_RED "Failed (bad parameter)" YANSI_RESET);
+		status = YEBADCONF;
+		goto cleanup;
+	}
+	if (!strcmp(dbname, A_DB_ALL_DATABASES_DEFINITION))
+		all_databases = true;
+	// log message
+	ALOG("├ " YANSI_FAINT "Database " YANSI_RESET "%s", dbname);
+	// creation of the log entry
+	if (!(log = log_create_pgsql(agent, dbname))) {
+		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
+		status = YENOMEM;
+		goto cleanup;
+	}
+	log->success = true;
+	// create pg_dump command
+	if (all_databases)
+		filename = ys_new(A_DB_ALL_DATABASES_FILENAME);
+	else
+		filename = ys_filenamize(dbname);
+	if (!filename ||
+	    !(log->archive_name = ys_printf(NULL, "%s.sql", filename)) ||
+	    !(log->archive_path = ys_printf(NULL, "%s/%s", agent->backup_mysql_path, log->archive_name)) ||
+	    !(dbport_str = ys_printf(NULL, "%d", (int)dbport)) ||
+	    !(password_env = ys_printf(NULL, "PGPASSWORD=\"%s\"", dbpwd)) ||
+	    !(args = yarray_create(11)) ||
+	    !(env = yarray_create(1))) {
+		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
+		status = log->dump_status = YENOMEM;
+		goto cleanup;
+	}
+	if (!(tmp_file = yfile_tmp("/tmp/arkiv-mysqldump_result"))) {
+		ALOG("│ └ " YANSI_RED "Unable to create temporary file" YANSI_RESET);
+		status = log->dump_status = YEIO;
+		goto cleanup;
+	}
+	yarray_push(&env, password_env);
+	yarray_push_multi(
+		&args,
+		11,
+		"-U",
+		dbuser,
+		"-h",
+		dbhost,
+		"-p",
+		dbport,
+		"-f",
+		tmp_file
+	);
+	if (!all_databases)
+		yarray_push(&args, dbname);
+	// execution
+	char *bin_path = all_databases ? agent->bin.pg_dumpall : agent->bin.pg_dump;
+	char *bin_name = all_databases ? "pg_dumpall" : "pg_dump";
+	ADEBUG("│ ├ " YANSI_FAINT "Execute " YANSI_RESET "%s" YANSI_FAINT " to " YANSI_RESET "%s", bin_name, log->archive_path);
+	status = yexec(bin_path, args, env, NULL, NULL);
+	if (status != YENOERR) {
+		ALOG("│ └ " YANSI_RED "%s error" YANSI_RESET, bin_name);
+		log->dump_status = status;
+		unlink(tmp_file);
+		goto cleanup;
+	}
+	// set log status
+	log->dump_status = YENOERR;
+	// move the file to its destination
+	if (rename(tmp_file, log->archive_path)) {
+		ALOG("│ └ " YANSI_RED "Unable to move file " YANSI_RESET "%s" YANSI_RED " to " YANSI_RED "%s" YANSI_RESET, tmp_file, log->archive_path);
+		status = log->dump_status = YEIO;
+		unlink(tmp_file);
+		goto cleanup;
+	}
+	// compression of the file
+	status = backup_compress_file(agent, log);
+cleanup:
+	if (status != YENOERR)
+		agent->exec_log.status_databases = false;
+	if (log)
+		log->success = (status == YENOERR) ? true : false;
+	ys_free(filename);
+	ys_free(password_env);
+	ys_free(dbport_str);
+	yarray_free(args);
+	yarray_free(env);
+	free0(tmp_file);
 	return (status);
 }
 /* Encrypt each backed up file. */
 static void backup_encrypt_files(agent_t *agent) {
 	ystatus_t st_files = YENOERR;
-	ystatus_t st_databases = YENOERR;
+	ystatus_t st_mysql = YENOERR;
+	ystatus_t st_pgsql = YENOERR;
 
 	// check if there is something to encrypt
 	if ((!agent->exec_log.backup_files || ytable_empty(agent->exec_log.backup_files)) &&
-	    (!agent->exec_log.backup_databases || ytable_empty(agent->exec_log.backup_databases)))
+	    (!agent->exec_log.backup_mysql || ytable_empty(agent->exec_log.backup_mysql)) &&
+	    (!agent->exec_log.backup_pgsql || ytable_empty(agent->exec_log.backup_pgsql)))
 		return;
 	// log message
 	ALOG(
@@ -705,14 +965,20 @@ static void backup_encrypt_files(agent_t *agent) {
 		ADEBUG("├ " YANSI_FAINT "Encrypt backed up files" YANSI_RESET);
 		st_files = ytable_foreach(agent->exec_log.backup_files, backup_encrypt_item, agent);
 	}
-	// encrypt backed up databases
-	if (agent->exec_log.backup_databases && !ytable_empty(agent->exec_log.backup_databases)) {
-		ADEBUG("├ " YANSI_FAINT "Encrypt backed up databases" YANSI_RESET);
-		st_files = ytable_foreach(agent->exec_log.backup_databases, backup_encrypt_item, agent);
+	// encrypt backed up MySQL databases
+	if (agent->exec_log.backup_mysql && !ytable_empty(agent->exec_log.backup_mysql)) {
+		ADEBUG("├ " YANSI_FAINT "Encrypt backed up MySQL databases" YANSI_RESET);
+		st_mysql = ytable_foreach(agent->exec_log.backup_mysql, backup_encrypt_item, agent);
 	}
-	if (st_files == YENOERR && st_databases == YENOERR)
+	// encrypt backed up PostgreSQL databases
+	if (agent->exec_log.backup_pgsql && !ytable_empty(agent->exec_log.backup_pgsql)) {
+		ADEBUG("├ " YANSI_FAINT "Encrypt backed up PostgreSQL databases" YANSI_RESET);
+		st_pgsql = ytable_foreach(agent->exec_log.backup_pgsql, backup_encrypt_item, agent);
+	}
+	// return status
+	if (st_files == YENOERR && st_mysql == YENOERR && st_pgsql == YENOERR)
 		ALOG("└ " YANSI_GREEN "Done" YANSI_RESET);
-	else if (st_files != YENOERR && st_databases != YENOERR)
+	else if (st_files != YENOERR && st_mysql != YENOERR && st_pgsql != YENOERR)
 		ALOG("└ " YANSI_RED "Error" YANSI_RESET);
 	else
 		ALOG("└ " YANSI_YELLOW "Partial error" YANSI_RESET);
@@ -728,6 +994,8 @@ static ystatus_t backup_encrypt_item(uint64_t hash, char *key, void *data, void 
 	ystr_t output_path = NULL;
 	ystr_t param = NULL;
 
+	if (!item->success)
+		return (YENOERR);
 	if (!(args = yarray_create(10)) ||
 	    !(pass_path = yfile_tmp("/tmp/arkiv"))) {
 		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
@@ -840,19 +1108,83 @@ cleanup:
 	yarray_free(args);
 	return (status);
 }
+/* Compress a backed up file. */
+static ystatus_t backup_compress_file(agent_t *agent, log_item_t *log) {
+	ystatus_t status = YENOERR;
+	yarray_t args = NULL;
+	ystr_t z_name = NULL, z_path = NULL;
+
+	// chec if a compression is needed
+	if (agent->param.compression == A_COMP_NONE ||
+	    !log->success)
+		return (YENOERR);
+	// create compression command
+	if (!(args = yarray_create(4))) {
+		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
+		status = YENOMEM;
+		log->compress_status = status;
+		log->success = false;
+		return (status);
+	}
+	if (agent->param.compression == A_COMP_ZSTD)
+		yarray_push(&args, "--rm");
+	yarray_push_multi(&args, 3, "--quiet", "--force", log->archive_path);
+	// execution
+	ADEBUG("│ ├ " YANSI_FAINT "Compress file " YANSI_RESET "%s", log->archive_path);
+	status = yexec(agent->bin.z, args, NULL, NULL, NULL);
+	if (status != YENOERR) {
+		ALOG("│ └ " YANSI_RED "Compression error" YANSI_RESET);
+		log->compress_status = status;
+		log->success = false;
+		goto cleanup;
+	}
+	ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
+	// set log status
+	log->compress_status = YENOERR;
+	// definitive paths
+	char *ext = NULL;
+	if (agent->param.compression == A_COMP_GZIP)
+		ext = "gz";
+	else if (agent->param.compression == A_COMP_BZIP2)
+		ext = "bz2";
+	else if (agent->param.compression == A_COMP_XZ)
+		ext = "xz";
+	else if (agent->param.compression == A_COMP_ZSTD)
+		ext = "zst";
+	z_name = ys_printf(NULL, "%s.%s", log->archive_name, ext);
+	z_path = ys_printf(NULL, "%s.%s", log->archive_path, ext);
+	if (!z_name || !z_path) {
+		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
+		status = YENOMEM;
+		log->compress_status = status;
+		log->success = false;
+		goto cleanup;
+	}
+	ys_free(log->archive_name);
+	ys_free(log->archive_path);
+	log->archive_name = z_name;
+	log->archive_path = z_path;
+	z_name = z_path = NULL;
+cleanup:
+	yarray_free(args);
+	ys_free(z_name);
+	ys_free(z_path);
+	return (status);
+}
 /* Compute the checksum of each backed up file. */
 static void backup_compute_checksums(agent_t *agent) {
-	ystatus_t st_files = YENOERR;
+	ystatus_t st_files = YENOERR, st_mysql = YENOERR, st_pgsql = YENOERR;
 	ystatus_t st_databases = YENOERR;
 
 	// check if there is something to compute
-	if ((!agent->exec_log.backup_files || ytable_empty(agent->exec_log.backup_files)) &&
-	    (!agent->exec_log.backup_databases || ytable_empty(agent->exec_log.backup_databases)))
+	if (ytable_empty(agent->exec_log.backup_files) &&
+	    ytable_empty(agent->exec_log.backup_mysql) &&
+	    ytable_empty(agent->exec_log.backup_pgsql))
 		return;
 	// log message
 	ALOG("Compute checksums");
 	// compute checksums of backed up files
-	if (agent->exec_log.backup_files && !ytable_empty(agent->exec_log.backup_files)) {
+	if (!ytable_empty(agent->exec_log.backup_files)) {
 		// change working directory
 		if (chdir(agent->backup_files_path)) {
 			ALOG("└ " YANSI_RED "Unable to change working directory to '" YANSI_RESET "%s" YANSI_RED "'" YANSI_RESET, agent->backup_files_path);
@@ -866,21 +1198,40 @@ static void backup_compute_checksums(agent_t *agent) {
 		else
 			ADEBUG("│ └ " YANSI_RED "Error" YANSI_RESET);
 	}
-	// compute checksums of backed up databases
-	if (agent->exec_log.backup_databases && !ytable_empty(agent->exec_log.backup_databases)) {
+	// compute checksums of backed up MySQL databases
+	if (!ytable_empty(agent->exec_log.backup_mysql)) {
 		// change working directory
-		if (chdir(agent->backup_databases_path)) {
-			ALOG("└ " YANSI_RED "Unable to change working directory to '" YANSI_RESET "%s" YANSI_RED "'" YANSI_RESET, agent->backup_databases_path);
+		if (chdir(agent->backup_mysql_path)) {
+			ALOG("└ " YANSI_RED "Unable to change working directory to '" YANSI_RESET "%s" YANSI_RED "'" YANSI_RESET, agent->backup_mysql_path);
 			return;
 		}
 		// compute
-		ADEBUG("├ " YANSI_FAINT "Compute checksums of backed up databases" YANSI_RESET);
-		st_files = ytable_foreach(agent->exec_log.backup_databases, backup_compute_checksum_item, agent);
-		if (st_databases == YENOERR)
+		ADEBUG("├ " YANSI_FAINT "Compute checksums of backed up MySQL databases" YANSI_RESET);
+		st_mysql = ytable_foreach(agent->exec_log.backup_mysql, backup_compute_checksum_item, agent);
+		if (st_mysql == YENOERR)
 			ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
 		else
 			ADEBUG("│ └ " YANSI_RED "Error" YANSI_RESET);
 	}
+	// compute checksums of backed up PostgreSQL databases
+	if (!ytable_empty(agent->exec_log.backup_pgsql)) {
+		// change working directory
+		if (chdir(agent->backup_pgsql_path)) {
+			ALOG("└ " YANSI_RED "Unable to change working directory to '" YANSI_RESET "%s" YANSI_RED "'" YANSI_RESET, agent->backup_pgsql_path);
+			return;
+		}
+		// compute
+		ADEBUG("├ " YANSI_FAINT "Compute checksums of backed up PostgreSQL databases" YANSI_RESET);
+		st_pgsql = ytable_foreach(agent->exec_log.backup_pgsql, backup_compute_checksum_item, agent);
+		if (st_pgsql == YENOERR)
+			ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
+		else
+			ADEBUG("│ └ " YANSI_RED "Error" YANSI_RESET);
+	}
+	if (st_mysql != YENOERR)
+		st_databases = st_mysql;
+	else if (st_pgsql != YENOERR)
+		st_databases = st_pgsql;
 	if (st_files == YENOERR && st_databases == YENOERR)
 		ALOG("└ " YANSI_GREEN "Done" YANSI_RESET);
 	else if (st_files != YENOERR && st_databases != YENOERR)
@@ -896,6 +1247,8 @@ static ystatus_t backup_compute_checksum_item(uint64_t hash, char *key, void *da
 	yarray_t args = NULL;
 	ybin_t bin = {0};
 
+	if (!item->success)
+		return (YENOERR);
 	ADEBUG("├ " YANSI_FAINT "Compute checksum of " YANSI_RESET "%s", item->archive_path);
 	// create argument list
 	if (!(args = yarray_create(1))) {

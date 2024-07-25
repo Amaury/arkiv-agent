@@ -154,36 +154,41 @@ void _agent_usage(const char *progname) {
 		YANSI_BG_GRAY YANSI_WHITE " Environment variables " YANSI_RESET "\n\n"
 		YANSI_RED "  Path to the configuration file\n" YANSI_RESET
 		YANSI_BOLD "  conf" YANSI_RESET "=/path/to/conf.ini\n"
-		YANSI_FAINT "  Default value: " YANSI_RESET YANSI_BLUE "/opt/arkiv/etc/agent.ini\n\n" YANSI_RESET
+		YANSI_FAINT "  Default value: " YANSI_RESET YANSI_CYAN "/opt/arkiv/etc/agent.ini\n\n" YANSI_RESET
 
 		YANSI_RED "  Path to the log file\n" YANSI_RESET
 		YANSI_BOLD "  logfile" YANSI_RESET "=/path/to/file.log\n"
 		YANSI_FAINT "  Use the value " YANSI_RESET YANSI_YELLOW "/dev/null" YANSI_RESET YANSI_FAINT " to disable file-based logging.\n"
-		"  Default value: " YANSI_RESET YANSI_BLUE "/var/log/arkiv-agent.log\n\n" YANSI_RESET
+		"  Default value: " YANSI_RESET YANSI_CYAN "/var/log/arkiv-agent.log\n\n" YANSI_RESET
 
 		YANSI_RED "  Enabling log on syslog\n" YANSI_RESET
 		YANSI_BOLD "  syslog" YANSI_RESET "=true\n"
 		YANSI_FAINT "  Sets the log to syslog, in addition to other logging mechanisms.\n"
-		"  Default value: " YANSI_RESET YANSI_BLUE "false\n\n" YANSI_RESET
+		"  Default value: " YANSI_RESET YANSI_CYAN "false\n\n" YANSI_RESET
 
 		YANSI_RED "  Activation of the debug mode\n" YANSI_RESET
 		YANSI_BOLD "  debug_mode" YANSI_RESET "=true\n"
 		YANSI_FAINT "  Set log level to 'DEBUG' (the program writes more log messages).\n"
-		"  Default value: " YANSI_RESET YANSI_BLUE "false\n\n" YANSI_RESET
+		"  Default value: " YANSI_RESET YANSI_CYAN "false\n\n" YANSI_RESET
 
 		YANSI_RED "  Log on STDOUT\n" YANSI_RESET
 		YANSI_BOLD "  stdout" YANSI_RESET "=true\n"
 		YANSI_FAINT "  Activate log on the standard output of the program.\n"
-		"  Default value: " YANSI_RESET YANSI_BLUE "false\n\n" YANSI_RESET
+		"  Default value: " YANSI_RESET YANSI_CYAN "false\n\n" YANSI_RESET
 
 		YANSI_RED "  Path to the archives directory\n" YANSI_RESET
 		YANSI_BOLD "  archives_path" YANSI_RESET "=/path/to/dir\n"
 		YANSI_FAINT "  Path to the directory where local archives will be created\n"
-		"  Default value: " YANSI_RESET YANSI_BLUE "/var/archives\n\n" YANSI_RESET
+		"  Default value: " YANSI_RESET YANSI_CYAN "/var/archives\n\n" YANSI_RESET
 
 		YANSI_RED "  Encryption password\n" YANSI_RESET
 		YANSI_BOLD "  crypt_pwd" YANSI_RESET "=...(40 characters-long password)...\n"
 		YANSI_FAINT "  Used to override the encryption password defined in the configuration file.\n\n" YANSI_RESET
+
+		YANSI_RED "  Disable ANSI sequences in log file\n" YANSI_RESET
+		YANSI_BOLD "  ansi" YANSI_RESET "=false\n"
+		YANSI_FAINT "  Set to " YANSI_RESET "false" YANSI_FAINT " to disable ANSI control sequences (color, bold…) in log file.\n" YANSI_RESET
+		"  Default value: " YANSI_RESET YANSI_CYAN "true\n\n" YANSI_RESET
 	);
 	printf(
 		YANSI_BG_GRAY YANSI_WHITE " Examples " YANSI_RESET "\n\n"
