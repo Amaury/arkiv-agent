@@ -54,11 +54,6 @@ agent_t *agent_new(char *exe_path) {
 	ys = agent_getenv(A_ENV_ANSI, NULL);
 	agent->conf.use_ansi = !ys || !ys[0] || !STR_IS_FALSE(ys);
 	ys_free(ys);
-	/*
-	agent->log.backup_files = yarray_new();
-	agent->log.backup_databases = yarray_new();
-	agent->log.upload_s3 = yarray_new();
-	*/
 	return (agent);
 }
 /* Returns a copy of an environment variable, or a default value. */
