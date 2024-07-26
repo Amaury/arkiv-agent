@@ -579,6 +579,7 @@ static ystatus_t backup_file(uint64_t hash, char *key, void *data, void *user_da
 	log_item_t *log = NULL;
 	ystr_t filename = NULL;
 	yarray_t args = NULL;
+	char *tmp_file = NULL;
 
 	// checks
 	if (!yvar_is_string(var_file_path) || !(file_path = yvar_get_string(var_file_path))) {
@@ -608,6 +609,11 @@ static ystatus_t backup_file(uint64_t hash, char *key, void *data, void *user_da
 		status = log->dump_status = YENOMEM;
 		goto cleanup;
 	}
+	if (!(tmp_file = yfile_tmp("/tmp/arkiv-tar_result"))) {
+		ALOG("│ └ " YANSI_RED "Unable to create temporary file" YANSI_RESET);
+		status = log->dump_status = YEIO;
+		goto cleanup;
+	}
 	yarray_push_multi(
 		&args,
 		9,
@@ -623,7 +629,8 @@ static ystatus_t backup_file(uint64_t hash, char *key, void *data, void *user_da
 	);
 	// execution
 	ADEBUG("│ ├ " YANSI_FAINT "Tar " YANSI_RESET "%s" YANSI_FAINT " to " YANSI_RESET "%s", file_path, log->archive_path);
-	status = yexec(agent->bin.tar, args, NULL, NULL, "/tmp/tar_result_arkiv");
+	status = yexec(agent->bin.tar, args, NULL, NULL, tmp_file);
+	unlink(tmp_file);
 	if (status != YENOERR) {
 		ALOG("│ └ " YANSI_RED "Tar error" YANSI_RESET);
 		log->dump_status = status;
@@ -640,6 +647,7 @@ cleanup:
 		log->success = (status == YENOERR) ? true : false;
 	ys_free(filename);
 	yarray_free(args);
+	free0(tmp_file);
 	return (status);
 }
 /* Backup all listed databases. They are tar'ed and compressed. */
@@ -769,7 +777,7 @@ static ystatus_t backup_mysql(uint64_t hash, char *key, void *data, void *user_d
 		status = log->dump_status = YENOMEM;
 		goto cleanup;
 	}
-	if (!(tmp_file = yfile_tmp("/tmp/arkiv-mysqldump_result"))) {
+	if (!(tmp_file = yfile_tmp(log->archive_path))) {
 		ALOG("│ └ " YANSI_RED "Unable to create temporary file" YANSI_RESET);
 		status = log->dump_status = YEIO;
 		goto cleanup;
@@ -887,7 +895,7 @@ static ystatus_t backup_pgsql(uint64_t hash, char *key, void *data, void *user_d
 		status = log->dump_status = YENOMEM;
 		goto cleanup;
 	}
-	if (!(tmp_file = yfile_tmp("/tmp/arkiv-mysqldump_result"))) {
+	if (!(tmp_file = yfile_tmp(log->archive_path))) {
 		ALOG("│ └ " YANSI_RED "Unable to create temporary file" YANSI_RESET);
 		status = log->dump_status = YEIO;
 		goto cleanup;
