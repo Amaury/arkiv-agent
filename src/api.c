@@ -518,9 +518,17 @@ static ystatus_t api_report_process_script(uint64_t hash, char *key, void *data,
 /** Add a file or database to the report. */
 static ystatus_t api_report_process_item(uint64_t hash, char *key, void *data, void *user_data) {
 	yvar_t *var = (yvar_t*)user_data;
-	ytable_t *items = yvar_get_table(var);
+	ytable_t *items = yvar_get_table(var); // list of items
 	log_item_t *item = (log_item_t*)data;
+	yvar_t *entry;
 
+	// check value
+	if (!items)
+		return (YEUNDEF);
+	// creation of the entry's table
+	if (!(entry = yvar_new_table(NULL)))
+		return (YENOMEM);
+	// set the status
 	if (item->success) {
 		// item successfully backed up
 		if (!(var = yvar_new_bool(true)))
@@ -552,6 +560,14 @@ static ystatus_t api_report_process_item(uint64_t hash, char *key, void *data, v
 				return (YENOMEM);
 		}
 	}
-	return (ytable_set_key(items, item->item, var));
+	ytable_set_key(yvar_get_table(entry), "s", var);
+	// set the archive size
+	if (item->success) {
+		if (!(var = yvar_new_int(item->archive_size)))
+			return (YENOMEM);
+		ytable_set_key(yvar_get_table(entry), "sz", var);
+	}
+	// add the new entry to the list of items (files or databases)
+	return (ytable_set_key(items, item->item, entry));
 }
 

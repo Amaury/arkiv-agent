@@ -36,6 +36,7 @@ typedef struct {
  * @field	item		Path to the file or directory to backup, or name of the database to backup.
  * @field	archive_name	Name of the archive file (tar + compress + encrypt'ed file).
  * @field	archive_path	Path to the archive file (tar + compress + encrypt'ed file).
+ * @field	archive_size	Size of the archive file, in bytes.
  * @field	checksum_name	Name of the checksum file.
  * @field	checksum_path	Path to the checksum file.
  * @field	success		True if the whole backup succeed.
@@ -54,6 +55,7 @@ typedef struct {
 	ystr_t item;
 	ystr_t archive_name;
 	ystr_t archive_path;
+	uint64_t archive_size;
 	ystr_t checksum_name;
 	ystr_t checksum_path;
 	bool success;

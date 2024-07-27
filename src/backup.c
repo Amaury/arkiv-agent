@@ -38,7 +38,7 @@ void exec_backup(agent_t *agent) {
 		ALOG(YANSI_RED "Abort" YANSI_RESET);
 		return;
 	}
-	// get sh512sum path
+	// get sha512sum path
 	if (!(agent->bin.checksum = get_program_path("sha512sum"))) {
 		ALOG("Search local programs");
 		ALOG("└ " YANSI_RED "Unable to find " YANSI_RESET "sha512sum" YANSI_RED " program" YANSI_RESET);
@@ -609,7 +609,7 @@ static ystatus_t backup_file(uint64_t hash, char *key, void *data, void *user_da
 		status = log->dump_status = YENOMEM;
 		goto cleanup;
 	}
-	if (!(tmp_file = yfile_tmp("/tmp/arkiv-tar_result"))) {
+	if (!(tmp_file = yfile_tmp(log->archive_path))) {
 		ALOG("│ └ " YANSI_RED "Unable to create temporary file" YANSI_RESET);
 		status = log->dump_status = YEIO;
 		goto cleanup;
@@ -618,7 +618,7 @@ static ystatus_t backup_file(uint64_t hash, char *key, void *data, void *user_da
 		&args,
 		9,
 		"cf",
-		log->archive_path,
+		tmp_file,
 		"--exclude-caches",
 		"--exclude-tag=.arkiv-exclude",
 		"--exclude-ignore=.arkiv-ignore",
@@ -629,8 +629,7 @@ static ystatus_t backup_file(uint64_t hash, char *key, void *data, void *user_da
 	);
 	// execution
 	ADEBUG("│ ├ " YANSI_FAINT "Tar " YANSI_RESET "%s" YANSI_FAINT " to " YANSI_RESET "%s", file_path, log->archive_path);
-	status = yexec(agent->bin.tar, args, NULL, NULL, tmp_file);
-	unlink(tmp_file);
+	status = yexec(agent->bin.tar, args, NULL, NULL, NULL);
 	if (status != YENOERR) {
 		ALOG("│ └ " YANSI_RED "Tar error" YANSI_RESET);
 		log->dump_status = status;
@@ -638,8 +637,17 @@ static ystatus_t backup_file(uint64_t hash, char *key, void *data, void *user_da
 	}
 	// set log status
 	log->dump_status = YENOERR;
+	// move the file to its destination
+	if (rename(tmp_file, log->archive_path)) {
+		ALOG("│ └ " YANSI_RED "Unable to move file " YANSI_RESET "%s" YANSI_RED " to " YANSI_RED "%s" YANSI_RESET, tmp_file, log->archive_path);
+		status = log->dump_status = YEIO;
+		unlink(tmp_file);
+		goto cleanup;
+	}
 	// compression of the file
 	status = backup_compress_file(agent, log);
+	// get archive file's size
+	log->archive_size = yfile_get_size(log->archive_path);
 cleanup:
 	if (status != YENOERR)
 		agent->exec_log.status_files = false;
@@ -818,6 +826,8 @@ static ystatus_t backup_mysql(uint64_t hash, char *key, void *data, void *user_d
 	}
 	// compression of the file
 	status = backup_compress_file(agent, log);
+	// get archive file's size
+	log->archive_size = yfile_get_size(log->archive_path);
 cleanup:
 	if (status != YENOERR)
 		agent->exec_log.status_databases = false;
@@ -937,6 +947,8 @@ static ystatus_t backup_pgsql(uint64_t hash, char *key, void *data, void *user_d
 	}
 	// compression of the file
 	status = backup_compress_file(agent, log);
+	// get archive file's size
+	log->archive_size = yfile_get_size(log->archive_path);
 cleanup:
 	if (status != YENOERR)
 		agent->exec_log.status_databases = false;
@@ -1105,6 +1117,8 @@ static ystatus_t backup_encrypt_item(uint64_t hash, char *key, void *data, void 
 	ys_free(item->archive_path);
 	item->archive_path = output_path;
 	output_path = NULL;
+	// get archive file's size
+	item->archive_size = yfile_get_size(item->archive_path);
 cleanup:
 	ys_free(param);
 	if (pass_path) {
