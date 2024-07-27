@@ -11,7 +11,7 @@
 bool yfile_exists(const char *path) {
 	struct stat st;
 
-	if (!path || stat(path, &st) || (!S_ISREG(st.st_mode) && !S_ISLNK(st.st_mode)))
+	if (!path || lstat(path, &st) || (!S_ISREG(st.st_mode) && !S_ISLNK(st.st_mode)))
 		return (false);
 	return (true);
 }
@@ -19,7 +19,7 @@ bool yfile_exists(const char *path) {
 bool yfile_is_link(const char *path) {
 	struct stat st;
 
-	if (!path || stat(path, &st) || !S_ISLNK(st.st_mode))
+	if (!path || lstat(path, &st) || !S_ISLNK(st.st_mode))
 		return (false);
 	return (true);
 }
@@ -27,7 +27,7 @@ bool yfile_is_link(const char *path) {
 bool yfile_is_dir(const char *path) {
 	struct stat st;
 
-	if (!path || stat(path, &st) || !S_ISDIR(st.st_mode))
+	if (!path || lstat(path, &st) || !S_ISDIR(st.st_mode))
 		return (false);
 	return (true);
 }
@@ -48,6 +48,14 @@ bool yfile_is_executable(const char *path) {
 	if (!path || access(path, X_OK))
 		return (false);
 	return (true);
+}
+/* Return the size of a readable file, in bytes. */
+uint64_t yfile_get_size(const char *path) {
+	struct stat st;
+
+	if (!path || stat(path, &st))
+		return (0);
+	return ((uint64_t)st.st_size);
 }
 /* Create a path of directories. */
 bool yfile_mkpath(const char *path, mode_t mode) {
@@ -251,3 +259,4 @@ bool yfile_contains(const char *path, const char *str) {
 	ys_free(ys);
 	return (result);
 }
+

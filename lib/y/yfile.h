@@ -11,11 +11,12 @@ extern "C" {
 
 #include <stdbool.h>
 #include <sys/stat.h>
+#include <stdint.h>
 #include "ybin.h"
 
 /**
  * @function	yfile_exists
- *		Tell if a file exists.
+ *		Tell if a file exists, and is a regular file or a symbolink link.
  * @param	path	Path to the file.
  * @return	True if the file exists.
  */
@@ -55,6 +56,13 @@ bool yfile_is_writable(const char *path);
  * @return	True if the file is executable.
  */
 bool yfile_is_executable(const char *path);
+/**
+ * @function	yfile_get_size
+ * @abstract	Return the size of a readable file, in bytes.
+ * @param	path	File path.
+ * @return	File's size.
+ */
+uint64_t yfile_get_size(const char *path);
 /**
  * @function	yfile_mkpath
  *		Create a path of directories and subdirectories.
