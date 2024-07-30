@@ -83,6 +83,19 @@
 				"# More information: https://www.arkiv.sh\n\n" \
 				"0 * * * *    root    %s backup\n"
 
+/* ********** LOGROTATE ********** */
+/** @const A_LOGROTATE_CONFIG_PATH	Path to the Arkiv's logorate configuration. */
+#define A_LOGROTATE_CONFIG_PATH	"/etc/logrotate.d/arkiv.log"
+/** @const A_LOGROTATE_CONFIG_CONTENT	Content of the Arkiv's lorotate configuration. */
+#define A_LOGROTATE_CONFIG_CONTENT	"# logrotate configuration for Arkiv.sh agent\n" \
+					"%s {\n" \
+					"	daily\n" \
+					"	rotate 7\n" \
+					"	missingok\n" \
+					"	compress\n" \
+					"	delaycompress\n" \
+					"}\n"
+
 /* ********** JSON KEYS ********** */
 /** @const A_JSON_ORG_KEY	JSON key for organisation key. */
 #define A_JSON_ORG_KEY		"org_key"

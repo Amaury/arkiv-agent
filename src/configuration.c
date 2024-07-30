@@ -75,6 +75,8 @@ void exec_configuration(agent_t *agent) {
 	exec_declare(agent);
 	// add agent to crontab
 	config_add_to_crontab(agent, cron_type);
+	// add log file management by logrotate
+	config_add_to_logrotate(logfile);
 
 	/* cleanup */
 	agent->conf.org_key = agent->conf.hostname = NULL;
@@ -283,5 +285,23 @@ static void config_add_to_crontab(agent_t *agent, config_crontab_t cron_type) {
 		printf(YANSI_RED "Abort." YANSI_RESET "\n");
 		exit(2);
 	}
+}
+/* Add log file management by logrotate, if possible. */
+static void config_add_to_logrotate(const char *logfile) {
+	printf("‣ Add to logrotate (file " YANSI_PURPLE A_LOGROTATE_CONFIG_PATH YANSI_RESET ")... ");
+	fflush(stdout);
+	ystr_t ys = ys_printf(NULL, A_LOGROTATE_CONFIG_CONTENT, logfile);
+	if (!ys) {
+		printf(YANSI_RED "failed (memory error). " YANSI_RESET "No log rotation set.\n");
+		return;
+	}
+	if (!yfile_put_string(A_LOGROTATE_CONFIG_PATH, ys) ||
+	    chmod(A_LOGROTATE_CONFIG_PATH, 0644)) {
+		unlink(A_LOGROTATE_CONFIG_PATH);
+		printf(YANSI_RED "failed. " YANSI_RESET "No log rotation set.\n");
+	} else {
+		printf(YANSI_GREEN "done" YANSI_RESET "\n");
+	}
+	ys_free(ys);
 }
 

@@ -92,5 +92,11 @@ void exec_configuration(agent_t *agent);
 	 * @return	YENOERR if the agent execution was in crontab or has been added successfully.
 	 */
 	static void config_add_to_crontab(agent_t *agent, config_crontab_t cron_type);
+	/**
+	 * @function	config_add_to_logrotate
+	 * @abstract	Add log file management by logrotate, if possible.
+	 * @param	logfile	Log file's path.
+	 */
+	static void config_add_to_logrotate(const char *logfile);
 #endif // __A_CONFIGURATION_PRIVATE__
 

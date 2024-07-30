@@ -90,7 +90,7 @@ dev: $(NAME)
 linux-x86_32: CC=$(CC_LINUX_X86_32)
 
 linux-x86_32: $(OBJS)
-	mkdir tmp
+	rm -rf tmp; mkdir tmp
 	cp ../lib/y/*.o *.o tmp/
 	cd tmp; $(CC) *.o $(LDFLAGS_STATIC) -o $(NAME_LINUX_X86_32)
 	mv tmp/$(NAME_LINUX_X86_32) .
@@ -101,16 +101,6 @@ linux-x86_64: CC=$(CC_LINUX_X86_64)
 
 linux-x86_64: $(OBJS)
 	$(CC) $(OBJS) ../lib/y/*.o $(LDFLAGS_STATIC) -o $(NAME_LINUX_X86_64)
-
-# static linking, Linux ARM 32
-linux-arm_32: CC=$(CC_LINUX_ARM_32)
-
-linux-arm_32: $(OBJS)
-	mkdir tmp
-	cp ../lib/y/*.o *.o tmp/
-	cd tmp; $(CC) *.o $(LDFLAGS_STATIC) -o $(NAME_LINUX_ARM_32)
-	mv tmp/$(NAME_LINUX_ARM_32) .
-	rm -rf tmp
 
 # static linking, Linux ARM 64
 linux-arm_64: CC=$(CC_LINUX_ARM_64)
@@ -138,7 +128,8 @@ macos-arm_64: $(OBJS)
 
 # cleaning
 clean:
-	rm -f $(NAME) $(NAME_LINUX_X86_32) $(NAME_LINUX_X86_64) $(NAME_LINUX_ARM_32) $(NAME_LINUX_ARM_64) $(NAME_LINUX_RISCV_64) $(NAME_MACOS_X86_64) $(NAME_MACOS_ARM_64) $(OBJS) *~ ../bin/$(NAME)
+	rm -f $(NAME) $(NAME_LINUX_X86_32) $(NAME_LINUX_X86_64) $(NAME_LINUX_ARM_64) $(NAME_LINUX_RISCV_64) $(NAME_MACOS_X86_64) $(NAME_MACOS_ARM_64) $(OBJS) *~ ../bin/$(NAME)
+	rm -rf tmp
 
 # cleaning and compiling
 all: clean $(NAME)
