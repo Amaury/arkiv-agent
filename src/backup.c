@@ -165,8 +165,17 @@ static ystatus_t backup_purge_local(agent_t *agent) {
 		ALOG("└ " YANSI_RED "Error" YANSI_RESET);
 		goto cleanup;
 	}
-	// removes empty directories
+	ys_delete(&ys);
+	/* removes empty directories */
 	ADEBUG("├ " YANSI_FAINT "Delete empty archive folders" YANSI_RESET);
+	// first, create a file to avoid the deletion of the root archives directory
+	ys = ys_printf(NULL, "%s/purge_time", agent->conf.archives_path);
+	if (!ys) {
+		ALOG("└ " YANSI_RED "Memory allocation error" YANSI_RESET);
+		goto cleanup;
+	}
+	yfile_touch(ys, 0600, 0700);
+	// then remove the empty directories
 	yarray_trunc(args, NULL, NULL);
 	yarray_push_multi(
 		&args,
@@ -184,6 +193,8 @@ static ystatus_t backup_purge_local(agent_t *agent) {
 		ALOG("└ " YANSI_RED "Execution error" YANSI_RESET);
 		goto cleanup;
 	}
+	// and finally the file is deleted
+	unlink(ys);
 	ALOG("└ " YANSI_GREEN "Done" YANSI_RESET);
 cleanup:
 	ys_free(ys);
@@ -279,7 +290,7 @@ static ystatus_t backup_fetch_params(agent_t *agent) {
 	// extract local retention
 	var_ptr = yvar_get_from_path(params, A_PARAM_PATH_RETENTION_HOURS);
 	int64_t retention_int = yvar_get_int(var_ptr);
-	if (!var_ptr || retention_int <= 0 || retention_int > UINT16_MAX) {
+	if (!var_ptr || retention_int < 0 || retention_int > UINT16_MAX) {
 		ALOG("├ " YANSI_YELLOW "No local retention duration value. Use default value (%d hours)." YANSI_RESET, A_DEFAULT_LOCAL_RETENTION);
 		agent->param.local_retention_hours = A_DEFAULT_LOCAL_RETENTION;
 	} else
