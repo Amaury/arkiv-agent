@@ -120,6 +120,10 @@ void exec_backup(agent_t *agent) {
 	if (backup_exec_scripts(agent, A_SCRIPT_TYPE_POST) != YENOERR) {
 		return;
 	}
+	// purge archive if needed
+	if (!agent->param.local_retention_hours) {
+		backup_purge_local(agent);
+	}
 }
 
 /* ********** PRIVATE FUNCTIONS ********** */
@@ -140,19 +144,20 @@ static ystatus_t backup_purge_local(agent_t *agent) {
 		ALOG("└ " YANSI_GREEN "Pass" YANSI_RESET);
 		return (YENOERR);
 	}
-	// removes files older than 24 hours
-	ys = ys_printf(NULL, "+%d", (agent->param.local_retention_hours * 60));
+	// removes files older than the configured duration
 	ADEBUG("├ " YANSI_FAINT "Delete archives older than %d hours" YANSI_RESET, agent->param.local_retention_hours);
 	yarray_push_multi(
 		&args,
-		6,
+		4,
 		agent->conf.archives_path,
 		"-type",
 		"f",
-		"-mmin",
-		ys,
 		"-delete"
 	);
+	if (agent->param.local_retention_hours > 0) {
+		ys = ys_printf(NULL, "+%d", (agent->param.local_retention_hours * 60));
+		yarray_push_multi(&args, 2, "-mmin", ys);
+	}
 	status = yexec(agent->bin.find, args, NULL, NULL, NULL);
 	if (status == YENOERR) {
 		ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);

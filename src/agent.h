@@ -303,51 +303,51 @@ typedef enum {
 /**
  * @typedef	agent_t
  * @abstract	Main structure of the Arkiv agent.
- * @field	exec_timestamp		Unix timestamp of execution start.
- * @field	agent_path		Realpath to the agent program.
- * @field	conf_path		Path to the configuration file.
- * @field	debug_mode		True if the debug mode was set.
- * @field	log_fd			File descriptor to the log file.
- * @field	datetime_chunk_path	Date and time string.
- * @field	backup_path		Real path to the backup directory.
- * @field	backup_files_path	Path to the files backup directory.
- * @field	backup_mysql_path	Path to the MySQL databases backup directory.
- * @field	backup_pgsql_path	Path to the PostgreSQL databases backup directory.
- * @field	conf.logfile		Log file's path.
- * @field	conf.archives_path	Root path to the local archives directory.
- * @field	conf.org_key		Organization key.
- * @field	conf.hostname		Hostname.
- * @field	conf.crypt_pwd		Encryption password.
- * @field	conf.use_syslog		True if syslog is used.
- * @field	conf.use_stdout		True when log must be written on STDOUT.
- * @field	conf.use_ansi		False to disable ANSI escape sequences in log messages.
- * @field	bin.tar			Path to the tar program.
- * @field	bin.z			Path to the compression program.
- * @field	bin.crypt		Path to the encryption program.
- * @field	bin.checksum		Path to sha512sum.
- * @field	bin.mysqldump		Path to mysqldump.
- * @field	bin.pg_dump		Path to pg_dump.
- * @field	bin.pg_dumpall		Path to pg_dumpall.
- * @field	param.org_name		Organization name.
- * @field	param.encryption	Encryption algorithm.
- * @field	param.compression	Compression algorithm.
- * @field	local_retention_hours	Number of hours of the local retention.
- * @field	retention_type		Type of distant retention.
- * @field	retention_duration	Duration of the distant retention.
- * @field	savepack_id		Identifier of the used saepack.
- * @field	param.pre_scripts	List of pre-scripts.
- * @field	param.post_scripts	List of post-scripts.
- * @field	param.files		List of files to back up.
- * @field	param.mysql		List of MySQL databases to back up.
- * @field	param.pgsql		List of PostgreSQL databases to back up.
- * @field	param.storage_name	Name of the used storage.
- * @field	param.storage		Associative array of storage parameters.
- * @field	param.storage_env	List of environment variables for the storage setting.
- * @field	log.status		Global execution status.
- * @field	log.backup_files	List of backed up files, with a status.
- * @field	log.backup_mysql	List of backed up MySQL databases, with a status.
- * @field	log.backup_pgsql	List of backed up PostgreSQL databases, with a status.
- * @field	log.upload_s3		List of S3 uploads, with a status.
+ * @field	exec_timestamp			Unix timestamp of execution start.
+ * @field	agent_path			Realpath to the agent program.
+ * @field	conf_path			Path to the configuration file.
+ * @field	debug_mode			True if the debug mode was set.
+ * @field	log_fd				File descriptor to the log file.
+ * @field	datetime_chunk_path		Date and time string.
+ * @field	backup_path			Real path to the backup directory.
+ * @field	backup_files_path		Path to the files backup directory.
+ * @field	backup_mysql_path		Path to the MySQL databases backup directory.
+ * @field	backup_pgsql_path		Path to the PostgreSQL databases backup directory.
+ * @field	conf.logfile			Log file's path.
+ * @field	conf.archives_path		Root path to the local archives directory.
+ * @field	conf.org_key			Organization key.
+ * @field	conf.hostname			Hostname.
+ * @field	conf.crypt_pwd			Encryption password.
+ * @field	conf.use_syslog			True if syslog is used.
+ * @field	conf.use_stdout			True when log must be written on STDOUT.
+ * @field	conf.use_ansi			False to disable ANSI escape sequences in log messages.
+ * @field	bin.tar				Path to the tar program.
+ * @field	bin.z				Path to the compression program.
+ * @field	bin.crypt			Path to the encryption program.
+ * @field	bin.checksum			Path to sha512sum.
+ * @field	bin.mysqldump			Path to mysqldump.
+ * @field	bin.pg_dump			Path to pg_dump.
+ * @field	bin.pg_dumpall			Path to pg_dumpall.
+ * @field	param.org_name			Organization name.
+ * @field	param.encryption		Encryption algorithm.
+ * @field	param.compression		Compression algorithm.
+ * @field	param.local_retention_hours	Number of hours of the local retention.
+ * @field	param.retention_type		Type of distant retention.
+ * @field	param.retention_duration	Duration of the distant retention.
+ * @field	param.savepack_id		Identifier of the used saepack.
+ * @field	param.pre_scripts		List of pre-scripts.
+ * @field	param.post_scripts		List of post-scripts.
+ * @field	param.files			List of files to back up.
+ * @field	param.mysql			List of MySQL databases to back up.
+ * @field	param.pgsql			List of PostgreSQL databases to back up.
+ * @field	param.storage_name		Name of the used storage.
+ * @field	param.storage			Associative array of storage parameters.
+ * @field	param.storage_env		List of environment variables for the storage setting.
+ * @field	log.status			Global execution status.
+ * @field	log.backup_files		List of backed up files, with a status.
+ * @field	log.backup_mysql		List of backed up MySQL databases, with a status.
+ * @field	log.backup_pgsql		List of backed up PostgreSQL databases, with a status.
+ * @field	log.upload_s3			List of S3 uploads, with a status.
  */
 typedef struct agent_s {
 	time_t exec_timestamp;

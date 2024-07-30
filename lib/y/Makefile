@@ -92,7 +92,7 @@ LDFLAGS	= -shared -Wl,-soname,$(SONAME)
 
 # #####################################################################
 
-.PHONY: clean all linux-x86_32 linux-x86_64 linux-arm_32 linux-arm_64 macos-x86_64 macos-arm_64
+.PHONY: clean all linux-x86_32 linux-x86_64 linux-arm_32 linux-arm_64 linux-riscv_64 macos-x86_64 macos-arm_64
 
 # dynamic compilation on local architeccture
 $(NAME): $(OBJS) $(SRC)
@@ -127,7 +127,12 @@ linux-arm_64: CC=$(CC_LINUX_ARM_64)
 
 linux-arm_64: clean $(OBJS)
 
-# objects compilation for MAcOS x86_64
+# objects compilation for RISCV 64
+linux-riscv_64: CC=$(CC_LINUX_RISCV_64)
+
+linux-riscv_64: clean $(OBJS)
+
+# objects compilation for MacOS x86_64
 macos-x86_64: CC=$(CC_MACOS_X86_64)
 
 macos-x86_64: clean $(OBJS)

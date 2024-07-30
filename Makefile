@@ -79,7 +79,7 @@ macos-arm_64: clean
 dist-linux-x86_32: linux-x86_32
 	rm -rf tmp
 	mkdir tmp
-	cp src/arkiv_agent-linux-x86_32 tmp/arkiv_agent
+	mv src/arkiv_agent-linux-x86_32 tmp/arkiv_agent
 	cp var/autoextract.sh tmp/
 	if [ ! -f var/rclone_linux-386 ]; then \
 		wget https://downloads.rclone.org/rclone-current-linux-386.zip -O var/rclone-current-linux-386.zip; \
@@ -100,7 +100,7 @@ dist-linux-x86_32: linux-x86_32
 dist-linux-x86_64: linux-x86_64
 	rm -rf tmp
 	mkdir tmp
-	cp src/arkiv_agent-linux-x86_64 tmp/arkiv_agent
+	mv src/arkiv_agent-linux-x86_64 tmp/arkiv_agent
 	cp var/autoextract.sh tmp/
 	if [ ! -f var/rclone_linux-amd64 ]; then \
 		wget https://downloads.rclone.org/rclone-current-linux-amd64.zip -O var/rclone-current-linux-amd64.zip; \
@@ -121,7 +121,7 @@ dist-linux-x86_64: linux-x86_64
 dist-linux-arm_64: linux-arm_64
 	rm -rf tmp
 	mkdir tmp
-	cp src/arkiv_agent-linux-arm_64 tmp/arkiv_agent
+	mv src/arkiv_agent-linux-arm_64 tmp/arkiv_agent
 	cp var/autoextract.sh tmp/
 	if [ ! -f var/rclone_linux-arm64 ]; then \
 		wget https://downloads.rclone.org/rclone-current-linux-arm64.zip -O var/rclone-current-linux-arm64.zip; \
@@ -142,7 +142,7 @@ dist-linux-arm_64: linux-arm_64
 dist-macos-x86_64: macos-x86_64
 	rm -rf tmp
 	mkdir tmp
-	cp src/arkiv_agent-macos-x86_64 tmp/arkiv_agent
+	mv src/arkiv_agent-macos-x86_64 tmp/arkiv_agent
 	cp var/autoextract.sh tmp/
 	if [ ! -f var/rclone_osx-amd64 ]; then \
 		wget https://downloads.rclone.org/rclone-current-osx-amd64.zip -O var/rclone-current-osx-amd64.zip; \
@@ -163,7 +163,7 @@ dist-macos-x86_64: macos-x86_64
 dist-macos-arm_64: macos-arm_64
 	rm -rf tmp
 	mkdir tmp
-	cp src/arkiv_agent-macos-arm_64 tmp/arkiv_agent
+	mv src/arkiv_agent-macos-arm_64 tmp/arkiv_agent
 	cp var/autoextract.sh tmp/
 	if [ ! -f var/rclone_osx-arm64 ]; then \
 		wget https://downloads.rclone.org/rclone-current-osx-arm64.zip -O var/rclone-current-osx-arm64.zip; \

@@ -53,6 +53,12 @@ linux-arm_64: clean
 	cp *.h ../../include/
 	popd > /dev/null
 
+linux-riscv_64: clean
+	pushd y > /dev/null
+	make linux-riscv_64
+	cp *.h ../../include/
+	popd > /dev/null
+
 macos-x86_64: clean
 	pushd y > /dev/null
 	make macos-x86_64
