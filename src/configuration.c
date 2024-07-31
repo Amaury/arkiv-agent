@@ -54,18 +54,18 @@ void exec_configuration(agent_t *agent) {
 
 	/* needed user inputs */
 	// ask for the organization key
-	org_key = config_ask_orgkey();
+	org_key = config_ask_orgkey(agent);
 	// hostname
-	hostname = config_ask_hostname();
+	hostname = config_ask_hostname(agent);
 	// backup path
 	archives_path = config_ask_archives_path(agent);
 	// log file
 	logfile = config_ask_log_file(agent);
 	// syslog
-	syslog = config_ask_syslog();
+	syslog = config_ask_syslog(agent);
 	// encryption password
 	printf("\n");
-	crypt_pwd = config_ask_encryption_password();
+	crypt_pwd = config_ask_encryption_password(agent);
 	printf("\n");
 	// write JSON file
 	config_write_json_file(org_key, hostname, archives_path, logfile, syslog, crypt_pwd);
@@ -89,27 +89,40 @@ void exec_configuration(agent_t *agent) {
 
 /* ********** PRIVATE FUNCTIONS ********** */
 /* Asks for the organization key. */
-static ystr_t config_ask_orgkey(void) {
+static ystr_t config_ask_orgkey(agent_t *agent) {
 	ystr_t ys = NULL;
+	bool has_defined_key = false;
 
+	if (agent->conf.org_key && ys_bytesize(agent->conf.org_key) == A_ORG_KEY_LENGTH)
+		has_defined_key = true;
 	for (; ; ) {
-		printf("Please, enter your organization key (45 characters-long string):\n" YANSI_BLUE);
+		printf("Please, enter your organization key (%d characters-long string):\n", A_ORG_KEY_LENGTH);
+		if (has_defined_key)
+			printf("[" YANSI_YELLOW "%s" YANSI_RESET "]\n", agent->conf.org_key);
+		printf(YANSI_BLUE);
 		fflush(stdout);
 		ys_gets(&ys, stdin);
 		printf(YANSI_RESET);
+		fflush(stdout);
 		ys_trim(ys);
-		size_t keySize = ys_bytesize(ys);
-		if (keySize == A_ORG_KEY_LENGTH)
+		size_t key_size = ys_bytesize(ys);
+		if (key_size == 0 && has_defined_key) {
+			ys_free(ys);
+			return (ys_dup(agent->conf.org_key));
+		}
+		if (key_size == A_ORG_KEY_LENGTH)
 			return (ys);
 		printf(YANSI_RED "Bad key (should be %d characters long)\n\n" YANSI_RESET, A_ORG_KEY_LENGTH);
 	}
-	printf("\n");
 }
 /* Asks for the hostname. */
-static ystr_t config_ask_hostname(void) {
+static ystr_t config_ask_hostname(agent_t *agent) {
 	ystr_t hostname = NULL;
 	ystr_t ys = NULL;
+	bool has_defined_hostname = false;
 
+	if (!ys_empty(agent->conf.hostname))
+		has_defined_hostname = true;
 	// fetch hostname
 	ybin_t data = {0};
 	ystatus_t res = yexec("/usr/bin/hostname", NULL, NULL, &data, NULL);
@@ -118,13 +131,13 @@ static ystr_t config_ask_hostname(void) {
 		ys_trim(hostname);
 	}
 	ybin_delete_data(&data);
-	if (res != YENOERR || ys_empty(hostname)) {
-		hostname = ys_free(hostname);
-		printf(YANSI_RED "Unable to get local host name.\n" YANSI_RESET);
-	}
+	if (res != YENOERR || ys_empty(hostname))
+		ys_delete(&hostname);
 	// ask user
 	printf("What is the local computer name?");
-	if (res == YENOERR && hostname)
+	if (has_defined_hostname)
+		printf(" [" YANSI_YELLOW "%s" YANSI_RESET "]", agent->conf.hostname);
+	else if (hostname)
 		printf(" [" YANSI_YELLOW "%s" YANSI_RESET "]", hostname);
 	printf("\n" YANSI_BLUE);
 	fflush(stdout);
@@ -133,6 +146,9 @@ static ystr_t config_ask_hostname(void) {
 	if (!ys_empty(ys)) {
 		ys_free(hostname);
 		hostname = ys;
+	} else if (has_defined_hostname) {
+		ys_free(hostname);
+		hostname = ys_dup(agent->conf.hostname);
 	}
 	return (hostname);
 }
@@ -148,7 +164,7 @@ static ystr_t config_ask_archives_path(agent_t *agent) {
 	if (!ys_empty(ys))
 		return (ys);
 	ys_free(ys);
-	return (ys_copy(A_PATH_ARCHIVES));
+	return (ys_dup(agent->conf.archives_path));
 }
 /* Asks for the log file. */
 static ystr_t config_ask_log_file(agent_t *agent) {
@@ -162,17 +178,21 @@ static ystr_t config_ask_log_file(agent_t *agent) {
 	if (!ys_empty(ys))
 		return (ys);
 	ys_free(ys);
-	return (ys_copy(A_PATH_LOGFILE));
+	return (ys_dup(agent->conf.logfile));
 }
 /* Asks for syslog. */
-static bool config_ask_syslog(void) {
+static bool config_ask_syslog(agent_t *agent) {
 	ystr_t ys = NULL;
 	bool result = false;
 
 	// ask for syslog
-	while (true) {
-		printf("Do you want to send logs to syslog? [" YANSI_YELLOW "y" YANSI_RESET
-		       "/" YANSI_YELLOW "N" YANSI_RESET "] " YANSI_BLUE);
+	for (; ; ) {
+		printf(
+			"Do you want to send logs to syslog? [" YANSI_YELLOW "%s" YANSI_RESET
+			"/" YANSI_YELLOW "%s" YANSI_RESET "] " YANSI_BLUE,
+			(agent->conf.use_syslog ? "Y" : "y"),
+			(agent->conf.use_syslog ? "n" : "N")
+		);
 		fflush(stdout);
 		ys_gets(&ys, stdin);
 		printf(YANSI_RESET);
@@ -181,30 +201,40 @@ static bool config_ask_syslog(void) {
 			printf(YANSI_RED "Incorrect value. Try again." YANSI_RESET "\n");
 			continue;
 		}
-		if (!ys_empty(ys) && !strcasecmp(ys, "y"))
+		if (ys_empty(ys))
+			result = agent->conf.use_syslog;
+		else if (!strcasecmp(ys, "y"))
 			result = true;
 		ys_free(ys);
 		return (result);
 	}
 }
 /* Asks for the encryption password. */
-static ystr_t config_ask_encryption_password(void) {
+static ystr_t config_ask_encryption_password(agent_t *agent) {
 	ystr_t ys = NULL;
+	bool has_defined_pwd = false;
 
+	if (!ys_empty(agent->conf.crypt_pwd))
+		has_defined_pwd = true;
 	for (; ; ) {
 		printf("Please enter your encryption password. "
 		       "It must be at least 24 characters long (40 characters is recommended).\n");
 		printf("You can generate a strong password with this command: "
-		       YANSI_TEAL "head -c 32 /dev/urandom | base64\n" YANSI_RESET YANSI_BLUE);
+		       YANSI_TEAL "head -c 32 /dev/urandom | base64" YANSI_RESET "\n");
+		if (has_defined_pwd)
+			printf("[" YANSI_YELLOW "%s" YANSI_RESET "]\n", agent->conf.crypt_pwd);
+		printf(YANSI_BLUE);
 		fflush(stdout);
 		ys_gets(&ys, stdin);
 		printf(YANSI_RESET);
 		ys_trim(ys);
-		if (ys_bytesize(ys) < A_MINIMUM_CRYPT_PWD_LENGTH) {
-			printf(YANSI_RED "Password too short." YANSI_RESET "\n");
-			continue;
+		if (ys_empty(ys) && has_defined_pwd) {
+			ys_free(ys);
+			return (ys_dup(agent->conf.crypt_pwd));
 		}
-		return (ys);
+		if (ys_bytesize(ys) >= A_MINIMUM_CRYPT_PWD_LENGTH)
+			return (ys);
+		printf(YANSI_RED "Password too short." YANSI_RESET "\n");
 	}
 }
 /* Writes the JSON configuration file. */

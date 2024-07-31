@@ -37,15 +37,17 @@ void exec_configuration(agent_t *agent);
 	/**
 	 * @function	config_ask_orgkey
 	 * @abstract	Asks for the organization key.
+	 * @param	agent	Pointer to the agent structure.
 	 * @return	The key. Must be freed.
 	 */
-	static ystr_t config_ask_orgkey(void);
+	static ystr_t config_ask_orgkey(agent_t *agent);
 	/**
 	 * @function	config_ask_hostname
 	 * @abstract	Asks for the hostname.
+	 * @param	agent	Pointer to the agent structure.
 	 * @return	The hostname.
 	 */
-	static ystr_t config_ask_hostname(void);
+	static ystr_t config_ask_hostname(agent_t *agent);
 	/**
 	 * @function	config_ask_archives_path
 	 * @abstract	Asks for the local archives path.
@@ -63,15 +65,17 @@ void exec_configuration(agent_t *agent);
 	/**
 	 * @function	config_ask_syslog
 	 * @abstract	Asks for syslog.
+	 * @param	agent	Pointer to the agent structure.
 	 * @return	True if syslog is used.
 	 */
-	static bool config_ask_syslog(void);
+	static bool config_ask_syslog(agent_t *agent);
 	/**
 	 * @function	config_ask_encryption_password
 	 * @abstract	Asks for the encryption password.
+	 * @param	agent	Pointer to the agent structure.
 	 * @return	The encryption password.
 	 */
-	static ystr_t config_ask_encryption_password(void);
+	static ystr_t config_ask_encryption_password(agent_t *agent);
 	/**
 	 * @function	config_write_json_file
 	 * @abstract	Writes the JSON configuration file.

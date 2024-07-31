@@ -97,8 +97,9 @@ ystr_t agent_getenv_static(char *envvar, const char *default_value) {
 	return (ys);
 }
 /* Reads the configuration file. */
-void agent_load_configuration(agent_t *agent) {
+void agent_load_configuration(agent_t *agent, bool permissive) {
 	ystr_t ys = NULL;
+	ytable_t *json = NULL;
 
 	// init
 	agent->exec_log.pre_scripts = ytable_new();
@@ -124,15 +125,19 @@ void agent_load_configuration(agent_t *agent) {
 	ys_free(ys);
 	// check result
 	if (YRES_STATUS(res) != YENOERR) {
+		if (permissive)
+			goto cleanup;
 		printf(YANSI_RED "Unable to read configuration file '%s'.\n" YANSI_RESET, agent->conf_path);
 		exit(3);
 	}
 	yvar_t json_var = YRES_VAL(res);
 	if (!yvar_is_table(&json_var)) {
+		if (permissive)
+			goto cleanup;
 		printf(YANSI_RED "Wrongly formatted configuration file '%s'.\n" YANSI_RESET, agent->conf_path);
 		exit(3);
 	}
-	ytable_t *json = yvar_get_table(&json_var);
+	json = yvar_get_table(&json_var);
 	// get JSON values
 	yvar_t *hostname = ytable_get_key_data(json, A_JSON_HOSTNAME);
 	yvar_t *org_key = ytable_get_key_data(json, A_JSON_ORG_KEY);
@@ -142,24 +147,32 @@ void agent_load_configuration(agent_t *agent) {
 	yvar_t *crypt_pwd = ytable_get_key_data(json, A_JSON_CRYPT_PWD);
 	// check hostname
 	if (!hostname || !yvar_is_string(hostname) || !(ys = yvar_get_string(hostname)) || ys_empty(ys)) {
+		if (permissive)
+			goto cleanup;
 		printf(YANSI_RED "Empty hostname in configuration file '%s'.\n" YANSI_RESET, agent->conf_path);
 		exit(3);
 	}
 	agent->conf.hostname = ys_copy(ys);
 	// check organization key
 	if (!org_key || !yvar_is_string(org_key) || !(ys = yvar_get_string(org_key)) || ys_empty(ys)) {
+		if (permissive)
+			goto cleanup;
 		printf(YANSI_RED "Empty organization key in configuration file '%s'.\n" YANSI_RESET, agent->conf_path);
 		exit(3);
 	}
 	agent->conf.org_key = ys_copy(ys);
 	// check archives path
 	if (!archives_path || !yvar_is_string(archives_path) || !(ys = yvar_get_string(archives_path)) || ys_empty(ys)) {
+		if (permissive)
+			goto cleanup;
 		printf(YANSI_RED "Empty archives path in configuration file '%s'.\n" YANSI_RESET, agent->conf_path);
 		exit(3);
 	}
 	agent->conf.archives_path = agent_getenv_static(A_ENV_ARCHIVES_PATH, ys);
 	// check encryption password
 	if (!crypt_pwd || !yvar_is_string(crypt_pwd) || !(ys = yvar_get_string(crypt_pwd)) || ys_empty(ys)) {
+		if (permissive)
+			goto cleanup;
 		printf(YANSI_RED "Empty encryption password in configuration file '%s'.\n" YANSI_RESET, agent->conf_path);
 		exit(3);
 	}
@@ -187,7 +200,7 @@ void agent_load_configuration(agent_t *agent) {
 	}
 	// check syslog and initialize syslog connection
 	ys = agent_getenv(A_ENV_SYSLOG, NULL);
-	enum { A_SYSLOG_UNDEF, A_SYSLOG_FORCE, A_SYSLOG_AVOID } use_syslog = A_SYSLOG_AVOID;
+	enum { A_SYSLOG_UNDEF, A_SYSLOG_FORCE, A_SYSLOG_AVOID } use_syslog = A_SYSLOG_UNDEF;
 	if (ys) {
 		if (STR_IS_TRUE(ys))
 			use_syslog = A_SYSLOG_FORCE;
@@ -200,7 +213,7 @@ void agent_load_configuration(agent_t *agent) {
 		agent->conf.use_syslog = true;
 		openlog(A_SYSLOG_IDENT, LOG_CONS, LOG_USER);
 	}
-	// cleanup
+cleanup:
 	ytable_free(json);
 	yjson_free(json_parser);
 }

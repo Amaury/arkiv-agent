@@ -58,11 +58,13 @@ int main(int argc, char *argv[]) {
 		// version
 		printf("%.01f\n", A_AGENT_VERSION);
 	} else if (exec_type == A_TYPE_CONFIG) {
+		// load configuration file
+		agent_load_configuration(agent, true);
 		// configuration
 		exec_configuration(agent);
 	} else {
 		// load configuration file
-		agent_load_configuration(agent);
+		agent_load_configuration(agent, false);
 		// show debug data
 		ADEBUG_RAW(YANSI_NEGATIVE "------------------------- DEBUG VARIABLES -------------------------" YANSI_RESET);
 		ADEBUG_RAW("agent_path           : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->agent_path);
@@ -153,8 +155,8 @@ void _agent_usage(const char *progname) {
 	printf(
 		YANSI_BG_GRAY YANSI_WHITE " Environment variables " YANSI_RESET "\n\n"
 		YANSI_RED "  Path to the configuration file\n" YANSI_RESET
-		YANSI_BOLD "  conf" YANSI_RESET "=/path/to/conf.ini\n"
-		YANSI_FAINT "  Default value: " YANSI_RESET YANSI_CYAN "/opt/arkiv/etc/agent.ini\n\n" YANSI_RESET
+		YANSI_BOLD "  conf" YANSI_RESET "=/path/to/conf.json\n"
+		YANSI_FAINT "  Default value: " YANSI_RESET YANSI_CYAN "/opt/arkiv/etc/agent.json\n\n" YANSI_RESET
 
 		YANSI_RED "  Path to the log file\n" YANSI_RESET
 		YANSI_BOLD "  logfile" YANSI_RESET "=/path/to/file.log\n"
