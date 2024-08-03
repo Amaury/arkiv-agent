@@ -100,14 +100,14 @@ void check_z(void) {
 		       YANSI_PURPLE "/usr/local/bin" YANSI_RESET ") or proceed without compression.\n\n");
 	} else {
 		printf("Here are the compression software installed on this server:\n");
-		printf("%s gzip    " YANSI_RESET, (hasGzip ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
-		printf(YANSI_FAINT "(1992) A standard; decent speed and compression ratio\n" YANSI_RESET);
-		printf("%s bzip2   " YANSI_RESET, (hasBzip2 ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
-		printf(YANSI_FAINT "(1996) Commonly installed; very good compression level and decent speed\n" YANSI_RESET);
-		printf("%s xz      " YANSI_RESET, (hasXz ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
-		printf(YANSI_FAINT "(2009) Not installed everywhere; the best compression ratio, but rather slow\n" YANSI_RESET);
 		printf("%s zstd    " YANSI_RESET, (hasZstd ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
 		printf(YANSI_FAINT "(2015) Not much installed; good compression level and very high speed\n" YANSI_RESET);
+		printf("%s xz      " YANSI_RESET, (hasXz ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
+		printf(YANSI_FAINT "(2009) Not installed everywhere; the best compression ratio, but rather slow\n" YANSI_RESET);
+		printf("%s bzip2   " YANSI_RESET, (hasBzip2 ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
+		printf(YANSI_FAINT "(1996) Commonly installed; very good compression level and decent speed\n" YANSI_RESET);
+		printf("%s gzip    " YANSI_RESET, (hasGzip ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
+		printf(YANSI_FAINT "(1992) A standard; decent speed and compression ratio\n" YANSI_RESET);
 	}
 	printf("\nDo you want to continue? [" YANSI_YELLOW "Y" YANSI_RESET "/" YANSI_YELLOW "n" YANSI_RESET "] " YANSI_BLUE);
 	fflush(stdout);
@@ -139,12 +139,12 @@ void check_crypt(void) {
 		exit(2);
 	}
 	printf("Here are the encryption software installed on this server:\n");
-	printf("%s openssl  " YANSI_RESET, (hasOpenssl ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
-	printf(YANSI_FAINT "Not designed for encrypting large files\n" YANSI_RESET);
-	printf("%s scrypt   " YANSI_RESET, (hasScrypt ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
-	printf(YANSI_FAINT "Very secure; slow by design\n" YANSI_RESET);
 	printf("%s gpg      " YANSI_RESET, (hasGpg ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
 	printf(YANSI_FAINT "GNU's implementation of the OpenPGP standard\n" YANSI_RESET);
+	printf("%s scrypt   " YANSI_RESET, (hasScrypt ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
+	printf(YANSI_FAINT "Very secure; slow by design\n" YANSI_RESET);
+	printf("%s openssl  " YANSI_RESET, (hasOpenssl ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
+	printf(YANSI_FAINT "Not designed for encrypting large files\n" YANSI_RESET);
 	printf("\nDo you want to continue? [" YANSI_YELLOW "Y" YANSI_RESET "/" YANSI_YELLOW "n" YANSI_RESET "] " YANSI_BLUE);
 	fflush(stdout);
 	ystr_t ys = NULL;

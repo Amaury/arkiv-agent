@@ -56,6 +56,13 @@ void exec_configuration(agent_t *agent);
 	 */
 	static ystr_t config_ask_archives_path(agent_t *agent);
 	/**
+	 * @function	config_ask_scripts
+	 * @abstract	Asks if pre- and post-scripts are allowed.
+	 * @param	agent	Pointer to the agent structure.
+	 * @return	True if scripts are allowed.
+	 */
+	static bool config_ask_scripts(agent_t *agent);
+	/**
 	 * @function	config_ask_log_file
 	 * @bastract	Asks for the log file.
 	 * @param	agent	Pointer to the agent structure.
@@ -82,12 +89,13 @@ void exec_configuration(agent_t *agent);
 	 * @param	org_key		Organization key.
 	 * @param	hostname	Hostname.
 	 * @param	archives_path	Archives path.
+	 * @param	scripts_allowed	True if pre- and post-scripts are allowed.
 	 * @param	logfile		Log file's path.
 	 * @param	syslog		True if syslog is used.
 	 * @param	crypt_pwd	Encryption password.
 	 */
 	static void config_write_json_file(const char *orgKey, const char *hostname, const char *archives_path,
-	                                   const char *logfile, bool syslog, const char *cryptPwd);
+	                                   bool scripts_allowed, const char *logfile, bool syslog, const char *cryptPwd);
 	/**
 	 * @function	config_add_to_crontab
 	 * @abstract	Check if the agent execution is already in crontab. If not, add it.

@@ -40,8 +40,9 @@ void exec_backup(agent_t *agent);
 	 * @function	backup_fetch_param
 	 * @abstract	Fetch and process host backup parameter file.
 	 * @param	agent	Pointer to the agent structure.
-	 * @return	YENOERR if everything went fine, YEAGAIN if no backup is schedule
-	 *		for the current execution time, other status if an error occurred.
+	 * @return	YENOERR if everything went fine;
+	 *		YEAGAIN if no backup is schedule for the current execution time;
+	 *		other status if an error occurred.
 	 */
 	static ystatus_t backup_fetch_params(agent_t *agent);
 	/**

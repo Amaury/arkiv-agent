@@ -25,6 +25,7 @@ void exec_configuration(agent_t *agent) {
 	ystr_t org_key = NULL;
 	ystr_t hostname = NULL;
 	ystr_t archives_path = NULL;
+	bool scripts = true;
 	ystr_t logfile = NULL;
 	bool syslog = false;
 	ystr_t crypt_pwd = NULL;
@@ -59,6 +60,8 @@ void exec_configuration(agent_t *agent) {
 	hostname = config_ask_hostname(agent);
 	// backup path
 	archives_path = config_ask_archives_path(agent);
+	// script authorization
+	scripts = config_ask_scripts(agent);
 	// log file
 	logfile = config_ask_log_file(agent);
 	// syslog
@@ -68,7 +71,7 @@ void exec_configuration(agent_t *agent) {
 	crypt_pwd = config_ask_encryption_password(agent);
 	printf("\n");
 	// write JSON file
-	config_write_json_file(org_key, hostname, archives_path, logfile, syslog, crypt_pwd);
+	config_write_json_file(org_key, hostname, archives_path, scripts, logfile, syslog, crypt_pwd);
 	// declare the server to arkiv.sh
 	agent->conf.org_key = org_key;
 	agent->conf.hostname = hostname;
@@ -166,6 +169,34 @@ static ystr_t config_ask_archives_path(agent_t *agent) {
 	ys_free(ys);
 	return (ys_dup(agent->conf.archives_path));
 }
+/* Asks if pre- and post-scripts are allowed. */
+static bool config_ask_scripts(agent_t *agent) {
+	ystr_t ys = NULL;
+	bool result = false;
+
+	for (; ; ) {
+		printf(
+			"Do you want to be able to execute pre- and post-scripts on this host? "
+			"[" YANSI_YELLOW "%s" YANSI_RESET "/" YANSI_YELLOW "%s" YANSI_RESET "] " YANSI_BLUE,
+			(agent->conf.scripts_allowed ? "Y" : "y"),
+			(agent->conf.scripts_allowed ? "n" : "N")
+		);
+		fflush(stdout);
+		ys_gets(&ys, stdin);
+		printf(YANSI_RESET);
+		ys_trim(ys);
+		if (!ys_empty(ys) && strcmp(ys, "n") && strcmp(ys, "N") && strcmp(ys, "y") && strcmp(ys, "Y")) {
+			printf(YANSI_RED "Incorrect value. Try again." YANSI_RESET "\n");
+			continue;
+		}
+		if (ys_empty(ys))
+			result = agent->conf.scripts_allowed;
+		else if (!strcasecmp(ys, "y"))
+			result = true;
+		ys_free(ys);
+		return (result);
+	}
+}
 /* Asks for the log file. */
 static ystr_t config_ask_log_file(agent_t *agent) {
 	ystr_t ys = NULL;
@@ -239,12 +270,13 @@ static ystr_t config_ask_encryption_password(agent_t *agent) {
 }
 /* Writes the JSON configuration file. */
 static void config_write_json_file(const char *org_key, const char *hostname, const char *archives_path,
-                                   const char *logfile, bool syslog, const char *crypt_pwd) {
+                                   bool scripts_allowed, const char *logfile, bool syslog, const char *crypt_pwd) {
 	yvar_t *config = yvar_new_table(NULL);
 	ytable_t *table = yvar_get_table(config);
 	ytable_set_key(table, A_JSON_ORG_KEY, yvar_new_const_string(org_key));
 	ytable_set_key(table, A_JSON_HOSTNAME, yvar_new_const_string(hostname));
 	ytable_set_key(table, A_JSON_ARCHIVES_PATH, yvar_new_const_string(archives_path));
+	ytable_set_key(table, A_JSON_SCRIPTS, yvar_new_bool(scripts_allowed));
 	ytable_set_key(table, A_JSON_LOGFILE, yvar_new_const_string(logfile));
 	ytable_set_key(table, A_JSON_SYSLOG, yvar_new_bool(syslog));
 	ytable_set_key(table, A_JSON_CRYPT_PWD, yvar_new_const_string(crypt_pwd));

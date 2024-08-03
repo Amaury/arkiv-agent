@@ -79,29 +79,37 @@ void exec_backup(agent_t *agent) {
 	}
 
 	ALOG("Start backup");
-	// create output directory
-	if (backup_create_output_directory(agent) != YENOERR) {
-		ALOG(YANSI_BG_RED "Abort" YANSI_RESET);
-		return;
-	}
-	// change working directory
-	if (chdir(agent->backup_path)) {
-		ALOG("└ " YANSI_RED "Unable to change working directory to '" YANSI_RESET "%s" YANSI_RED "'" YANSI_RESET, agent->backup_path);
-		ALOG(YANSI_BG_RED "Abort" YANSI_RESET);
-		return;
-	}
-	// execute pre-scripts
-	if (backup_exec_scripts(agent, A_SCRIPT_TYPE_PRE) == YENOERR) {
-		// backup files
-		backup_files(agent);
-		// backup databases
-		backup_databases(agent);
-		// encrypt files
-		backup_encrypt_files(agent);
-		// compute checksums
-		backup_compute_checksums(agent);
-		// upload files
-		upload_files(agent);
+	// check if pre- or post-scripts are defined while scripts are not allowed
+	agent->exec_log.status_scripts = true;
+	if (!agent->conf.scripts_allowed &&
+	    (ytable_length(agent->param.pre_scripts) || ytable_length(agent->param.post_scripts))) {
+		agent->exec_log.status_scripts = false;
+		ALOG("└ " YANSI_RED "Scripts are not allowed on this host" YANSI_RESET);
+	} else {
+		// create output directory
+		if (backup_create_output_directory(agent) != YENOERR) {
+			ALOG(YANSI_BG_RED "Abort" YANSI_RESET);
+			return;
+		}
+		// change working directory
+		if (chdir(agent->backup_path)) {
+			ALOG("└ " YANSI_RED "Unable to change working directory to '" YANSI_RESET "%s" YANSI_RED "'" YANSI_RESET, agent->backup_path);
+			ALOG(YANSI_BG_RED "Abort" YANSI_RESET);
+			return;
+		}
+		// execute pre-scripts
+		if (backup_exec_scripts(agent, A_SCRIPT_TYPE_PRE) == YENOERR) {
+			// backup files
+			backup_files(agent);
+			// backup databases
+			backup_databases(agent);
+			// encrypt files
+			backup_encrypt_files(agent);
+			// compute checksums
+			backup_compute_checksums(agent);
+			// upload files
+			upload_files(agent);
+		}
 	}
 	// send report
 	ALOG("Send report to arkiv.sh");
@@ -463,6 +471,9 @@ static ystatus_t backup_exec_scripts(agent_t *agent, script_type_t type) {
 	ytable_t *scripts;
 	ytable_function_t callback;
 
+	// check if scripts are allowed
+	if (!agent->conf.scripts_allowed)
+		return (YEPERM);
 	// use the pre- or post-list
 	if (type == A_SCRIPT_TYPE_PRE) {
 		scripts = agent->param.pre_scripts;

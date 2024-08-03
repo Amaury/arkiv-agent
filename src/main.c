@@ -2,7 +2,7 @@
  * Arkiv agent.
  * Command line:
  * ./agent
- * debug_mode=true ./agent
+ * debug=true ./agent
  * logfile=/var/log/arkiv/arkiv.log ./agent
  * loglevel=WARN ./agent
  *
@@ -70,7 +70,6 @@ int main(int argc, char *argv[]) {
 		ADEBUG_RAW("agent_path           : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->agent_path);
 		ADEBUG_RAW("conf_path            : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->conf_path);
 		ADEBUG_RAW("execution timestamp  : '" YANSI_FAINT "%.f" YANSI_RESET "'", difftime(agent->exec_timestamp, (time_t)0));
-		ADEBUG_RAW("debug_mode           : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->debug_mode ? "true" : "false");
 		ADEBUG_RAW("conf.logfile         : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->conf.logfile);
 		ADEBUG_RAW("conf.archives_path   : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->conf.archives_path);
 		ADEBUG_RAW("conf.org_key         : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->conf.org_key);
@@ -169,7 +168,7 @@ void _agent_usage(const char *progname) {
 		"  Default value: " YANSI_RESET YANSI_CYAN "false\n\n" YANSI_RESET
 
 		YANSI_RED "  Activation of the debug mode\n" YANSI_RESET
-		YANSI_BOLD "  debug_mode" YANSI_RESET "=true\n"
+		YANSI_BOLD "  debug" YANSI_RESET "=true\n"
 		YANSI_FAINT "  Set log level to 'DEBUG' (the program writes more log messages).\n"
 		"  Default value: " YANSI_RESET YANSI_CYAN "false\n\n" YANSI_RESET
 
@@ -209,7 +208,7 @@ void _agent_usage(const char *progname) {
 		YANSI_GREEN "/opt/arkiv/bin/agent " YANSI_RESET
 		YANSI_YELLOW "backup\n\n" YANSI_RESET
 		"  Activate the debug mode, with a specific log file:\n"
-		YANSI_FAINT "  debug_mode=true logfile=/root/arkiv.log " YANSI_RESET
+		YANSI_FAINT "  debug=true logfile=/root/arkiv.log " YANSI_RESET
 		YANSI_GREEN "/opt/arkiv/bin/agent " YANSI_RESET
 		YANSI_YELLOW "backup\n\n" YANSI_RESET
 		"  Write log on syslog:\n"

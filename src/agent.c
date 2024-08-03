@@ -2,9 +2,8 @@
  * Arkiv agent.
  * Command line:
  * ./agent
- * debug_mode=true ./agent
+ * debug=true ./agent
  * logfile=/var/log/arkiv/arkiv.log ./agent
- * debug_mode=true ./agent
  *
  * @author	Amaury Bouchard <amaury@amaury.net>
  * @copyright	© 2024, Amaury Bouchard
@@ -142,6 +141,7 @@ void agent_load_configuration(agent_t *agent, bool permissive) {
 	yvar_t *hostname = ytable_get_key_data(json, A_JSON_HOSTNAME);
 	yvar_t *org_key = ytable_get_key_data(json, A_JSON_ORG_KEY);
 	yvar_t *archives_path = ytable_get_key_data(json, A_JSON_ARCHIVES_PATH);
+	yvar_t *scripts = ytable_get_key_data(json, A_JSON_SCRIPTS);
 	yvar_t *logfile = ytable_get_key_data(json, A_JSON_LOGFILE);
 	yvar_t *syslog = ytable_get_key_data(json, A_JSON_SYSLOG);
 	yvar_t *crypt_pwd = ytable_get_key_data(json, A_JSON_CRYPT_PWD);
@@ -169,6 +169,10 @@ void agent_load_configuration(agent_t *agent, bool permissive) {
 		exit(3);
 	}
 	agent->conf.archives_path = agent_getenv_static(A_ENV_ARCHIVES_PATH, ys);
+	// check pre- and post-scripts authorization
+	if (!scripts || !yvar_is_bool(scripts) || yvar_get_bool(scripts) == true) {
+		agent->conf.scripts_allowed = true;
+	}
 	// check encryption password
 	if (!crypt_pwd || !yvar_is_string(crypt_pwd) || !(ys = yvar_get_string(crypt_pwd)) || ys_empty(ys)) {
 		if (permissive)

@@ -38,7 +38,7 @@
 /** @const A_ENV_SYSLOG		Environment variable for syslog usage. */
 #define A_ENV_SYSLOG		"syslog"
 /** @const A_ENV_DEBUG_MODE	Environment variable for the debug mode. */
-#define A_ENV_DEBUG_MODE	"debug_mode"
+#define A_ENV_DEBUG_MODE	"debug"
 /** @const A_ENV_ARCHIVES_PATH	Environment variable for the local archives path. */
 #define A_ENV_ARCHIVES_PATH	"archives_path"
 /** @const A_ENV_CRYPT_PWD	Environment variable for the encryption password. */
@@ -103,6 +103,8 @@
 #define A_JSON_HOSTNAME		"hostname"
 /** @const A_JSON_ARCHIVES_PATH	JSON key for archives path. */
 #define A_JSON_ARCHIVES_PATH	"archives_path"
+/** @const A_JSON_SCRIPTS	JSON key for pre- and post-scripts authorization. */
+#define A_JSON_SCRIPTS		"scripts"
 /** @const A_JSON_LOGFILE	JSON key for log file. */
 #define A_JSON_LOGFILE		"logfile"
 /** @const A_JSON_SYSLOG	JSON key for syslog. */
@@ -318,6 +320,7 @@ typedef enum {
  * @field	conf.org_key			Organization key.
  * @field	conf.hostname			Hostname.
  * @field	conf.crypt_pwd			Encryption password.
+ * @field	conf.scripts_allowed		True is pre- and post-scripts are allowed.
  * @field	conf.use_syslog			True if syslog is used.
  * @field	conf.use_stdout			True when log must be written on STDOUT.
  * @field	conf.use_ansi			False to disable ANSI escape sequences in log messages.
@@ -366,6 +369,7 @@ typedef struct agent_s {
 		ystr_t org_key;
 		ystr_t hostname;
 		ystr_t crypt_pwd;
+		bool scripts_allowed;
 		bool use_syslog;
 		bool use_stdout;
 		bool use_ansi;
@@ -404,6 +408,7 @@ typedef struct agent_s {
 		ytable_t *backup_mysql;
 		ytable_t *backup_pgsql;
 		ytable_t *post_scripts;
+		bool status_scripts;
 		bool status_pre_scripts;
 		bool status_files;
 		bool status_databases;

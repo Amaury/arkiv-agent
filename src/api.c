@@ -168,6 +168,14 @@ ystatus_t api_backup_report(agent_t *agent) {
 	}
 	if ((st = ytable_set_key(root, "st_global", var)) != YENOERR)
 		goto cleanup;
+	if (!agent->exec_log.status_scripts) {
+		if (!(var = yvar_new_bool(false))) {
+			st = YENOMEM;
+			goto cleanup;
+		}
+		if ((st = ytable_set_key(root, "st_scripts", var)) != YENOERR)
+			goto cleanup;
+	}
 	if (!ytable_empty(agent->exec_log.pre_scripts)) {
 		if (!(var = yvar_new_bool(agent->exec_log.status_pre_scripts))) {
 			st = YENOMEM;
