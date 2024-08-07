@@ -103,12 +103,10 @@ void agent_load_configuration(agent_t *agent, bool permissive) {
 	// init
 	agent->exec_log.pre_scripts = ytable_new();
 	agent->exec_log.backup_files = ytable_new();
-	agent->exec_log.backup_mysql = ytable_new();
-	agent->exec_log.backup_pgsql = ytable_new();
+	agent->exec_log.backup_databases = ytable_new();
 	agent->exec_log.post_scripts = ytable_new();
 	if (!agent->exec_log.pre_scripts || !agent->exec_log.backup_files ||
-	    !agent->exec_log.backup_mysql || !agent->exec_log.backup_pgsql ||
-	    !agent->exec_log.post_scripts) {
+	    !agent->exec_log.backup_databases || !agent->exec_log.post_scripts) {
 		printf(YANSI_RED "Memory allocation error\n" YANSI_RESET);
 		exit(3);
 	}

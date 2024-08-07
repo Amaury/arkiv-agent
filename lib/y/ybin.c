@@ -80,6 +80,12 @@ ybin_t *ybin_clone(ybin_t *bin) {
 	new_bin->buffer_size = bin->buffer_size;
 	return (new_bin);
 }
+/* Tell if a ybin is empty. */
+bool ybin_empty(ybin_t *bin) {
+	if (!bin || !bin->bytesize || !bin->data || !bin->buffer_size)
+		return (true);
+	return (false);
+}
 /* Copy the content of a ybin inside another one. */
 void ybin_copy(ybin_t *source, ybin_t *dest) {
 	if (!source || !dest)

@@ -109,8 +109,8 @@ void exec_backup(agent_t *agent);
 	 */
 	static void backup_databases(agent_t *agent);
 	/**
-	 * @function	backup_mysql
-	 * @abstract	Backup a MySQL database.
+	 * @function	backup_database
+	 * @abstract	Backup a database.
 	 * @param	hash		Index in the list of MySQL databases.
 	 * @param	key		Always null.
 	 * @param	data		Associative array with database's information.
@@ -119,31 +119,23 @@ void exec_backup(agent_t *agent);
 	 *		YEBADCONF if the configuration is not valid,
 	 *		YENOEXEC if an error occurred during the backup.
 	 */
-	static ystatus_t backup_mysql(uint64_t hash, char *key, void *data, void *user_data);
+	static ystatus_t backup_database(uint64_t hash, char *key, void *data, void *user_data);
+	/**
+	 * @funuction	backup_mysql
+	 * @abstract	Backup a MySQL database.
+	 * @param	agent	Pointer to the agent structure.
+	 * @param	db_data	Pointer to the table which contains the database configuration.
+	 * @return	YENOERR if the database was dumped and compressed successfully.
+	 */
+	static ystatus_t backup_mysql(agent_t *agent, ytable_t *db_data);
 	/**
 	 * @function	backup_pgsql
 	 * @abstract	Backup a PostgreSQL database.
-	 * @param	hash		Index in the list of PostgreSQL databases.
-	 * @param	key		Always null.
-	 * @param	data		Associative array with database's information.
-	 * @param	user_data	Pointer to the agent structure.
+	 * @param	agent	Pointer to the agent structure.
+	 * @param	db_data	Pointer to the table which contains the database configuration.
 	 * @return	YENOERR if the database was dumped and compressed successfully.
-	 *		YEBADCONF if the configuration is not valid,
-	 *		YENOEXEC if an error occurred during the backup.
 	 */
-	static ystatus_t backup_pgsql(uint64_t hash, char *key, void *data, void *user_data);
-	/**
-	 * @function	backup_pgsql
-	 * @abstract	Backup one PostgreSQL database.
-	 * @param	hash		Index in the list of PostgreSQL databases.
-	 * @param	key		Always null.
-	 * @param	data		Associative array with database's information.
-	 * @param	user_data	Pointer to the agent structure.
-	 * @return	YENOERR if the database was dumped and compressed successfully.
-	 *		YEBADCONF if the configuration is not valid,
-	 *		YENOEXEC if an error occurred during the backup.
-	 */
-	static ystatus_t backup_pgsql(uint64_t hash, char *key, void *data, void *user_data);
+	static ystatus_t backup_pgsql(agent_t *agent, ytable_t *db_data);
 	/**
 	 * @function	backup_encrypt
 	 * @abstract	Encrypt each backed up file.

@@ -49,8 +49,9 @@ typedef struct {
 typedef struct {
 	enum {
 		A_ITEM_TYPE_FILE = 0,
-		A_ITEM_TYPE_MYSQL,
-		A_ITEM_TYPE_PGSQL
+		A_ITEM_TYPE_DB_MYSQL,
+		A_ITEM_TYPE_DB_PGSQL,
+		A_ITEM_TYPE_DB_MONGODB
 	} type;
 	ystr_t item;
 	ystr_t archive_name;

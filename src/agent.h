@@ -168,10 +168,8 @@
 #define A_PARAM_PATH_POST			"/post"
 /** @const A_PARAM_PATH_FILE			Path to the list of files. */
 #define A_PARAM_PATH_FILE			"/file"
-/** @const A_PARAM_PATH_MYSQL			Path to the list of MySQL databases. */
-#define A_PARAM_PATH_MYSQL			"/mysql"
-/** @const A_PARAM_PATH_PGSQL			Path to the list of PostgreSQL databases. */
-#define A_PARAM_PATH_PGSQL			"/pgsql"
+/** @const A_PARAM_PATH_DB			Path to the list of databases. */
+#define A_PARAM_PATH_DB				"/db"
 /** @const A_PARAM_KEY_TYPE			Key to a type element. */
 #define A_PARAM_KEY_TYPE			"t"
 /** @const A_PARAM_KEY_ACCESS_KEY		Key to an access key element. */
@@ -196,6 +194,10 @@
 #define A_PARAM_KEY_KEYFILE			"ke"
 /** @const A_PARAM_KEY_DB			Key to a database name. */
 #define A_PARAM_KEY_DB				"db"
+/** @const A_PARAM_KEY_STATUS			Key to a status value. */
+#define A_PARAM_KEY_STATUS			"s"
+/** @const A_PARAM_KEY_SIZE			Key to a file size. */
+#define A_PARAM_KEY_SIZE			"sz"
 
 /* ********** ENCRYPTION METHOD PARAM CHARACTERS ********** */
 /** @const A_CRYPT_OPENSSL	OpenSSL. */
@@ -224,6 +226,12 @@
 #define A_STORAGE_TYPE_SFTP		"sftp"
 
 /* ********** DATABASE MACROS ********** */
+/** @const A_DB_STR_MYSQL			MySQL database. */
+#define A_DB_STR_MYSQL			"mysql"
+/** @const A_DB_STR_PGSQL			PostgreSQL database. */
+#define A_DB_STR_PGSQL			"pgsql"
+/** @const A_DB_STR_MONGODB			MongoDB database. */
+#define A_DB_STR_MONGODB		"mongodb"
 /** @const A_DB_ALL_DATABASES_DEFINITION	All databases. */
 #define A_DB_ALL_DATABASES_DEFINITION	"*"
 /** @const A_DB_ALL_DATABASES_FILENAME		Name of the dumpfile for all databases. */
@@ -297,6 +305,7 @@ typedef enum {
  * @abstract	Defines a type of database.
  * @field	A_DB_MYSQL	MySQL database.
  * @field	A_DB_PGSQL	PostgreSQL database.
+ * @field	A_DB_MONGODB	MongoDB database.
  */
 typedef enum {
 	A_DB_MYSQL = 0,
@@ -315,6 +324,7 @@ typedef enum {
  * @field	backup_files_path		Path to the files backup directory.
  * @field	backup_mysql_path		Path to the MySQL databases backup directory.
  * @field	backup_pgsql_path		Path to the PostgreSQL databases backup directory.
+ * @field	backup_mongodb_path		Path to the MongoDB databases backup directory.
  * @field	conf.logfile			Log file's path.
  * @field	conf.archives_path		Root path to the local archives directory.
  * @field	conf.org_key			Organization key.
@@ -331,6 +341,7 @@ typedef enum {
  * @field	bin.mysqldump			Path to mysqldump.
  * @field	bin.pg_dump			Path to pg_dump.
  * @field	bin.pg_dumpall			Path to pg_dumpall.
+ * @field	bin.mongodump			Path to mongodump.
  * @field	param.org_name			Organization name.
  * @field	param.encryption		Encryption algorithm.
  * @field	param.compression		Compression algorithm.
@@ -341,16 +352,19 @@ typedef enum {
  * @field	param.pre_scripts		List of pre-scripts.
  * @field	param.post_scripts		List of post-scripts.
  * @field	param.files			List of files to back up.
- * @field	param.mysql			List of MySQL databases to back up.
- * @field	param.pgsql			List of PostgreSQL databases to back up.
+ * @field	param.databases			List of databases to back up.
  * @field	param.storage_name		Name of the used storage.
  * @field	param.storage			Associative array of storage parameters.
  * @field	param.storage_env		List of environment variables for the storage setting.
- * @field	log.status			Global execution status.
- * @field	log.backup_files		List of backed up files, with a status.
- * @field	log.backup_mysql		List of backed up MySQL databases, with a status.
- * @field	log.backup_pgsql		List of backed up PostgreSQL databases, with a status.
- * @field	log.upload_s3			List of S3 uploads, with a status.
+ * @field	exec_log.pre_scripts		List of executed pre-scripts, with a status.
+ * @field	exec_log.backup_files		List of backed up files, with a status.
+ * @field	exec_log.backup_databases	List of backed up databases, with a status.
+ * @field	exec_log.post_scripts		List of executed post-scripts, with a status.
+ * @field	exec_log.status_scripts		False is a scripts was asked but they are not locally allowed.
+ * @field	exec_log.status_pre_scripts	Status of the pre-scripts execution.
+ * @field	exec_log.status_files		Status of the files backup.
+ * @field	exec_log.status_databases	Status of the databases backup.
+ * @field	exeec_log.status_post_scripts	Status of the post-scripts execution.
  */
 typedef struct agent_s {
 	time_t exec_timestamp;
@@ -363,6 +377,7 @@ typedef struct agent_s {
 	ystr_t backup_files_path;
 	ystr_t backup_mysql_path;
 	ystr_t backup_pgsql_path;
+	ystr_t backup_mongodb_path;
 	struct {
 		ystr_t logfile;
 		ystr_t archives_path;
@@ -383,6 +398,7 @@ typedef struct agent_s {
 		ystr_t mysqldump;
 		ystr_t pg_dump;
 		ystr_t pg_dumpall;
+		ystr_t mongodump;
 	} bin;
 	struct {
 		ystr_t org_name;
@@ -395,8 +411,7 @@ typedef struct agent_s {
 		ytable_t *pre_scripts;
 		ytable_t *post_scripts;
 		ytable_t *files;
-		ytable_t *mysql;
-		ytable_t *pgsql;
+		ytable_t *databases;
 		ystr_t storage_name;
 		uint64_t storage_id;
 		ytable_t *storage;
@@ -405,8 +420,7 @@ typedef struct agent_s {
 	struct {
 		ytable_t *pre_scripts;
 		ytable_t *backup_files;
-		ytable_t *backup_mysql;
-		ytable_t *backup_pgsql;
+		ytable_t *backup_databases;
 		ytable_t *post_scripts;
 		bool status_scripts;
 		bool status_pre_scripts;

@@ -145,22 +145,19 @@ ystatus_t api_backup_report(agent_t *agent) {
 		ytable_foreach(agent->exec_log.backup_files, api_report_process_item, var);
 	}
 	// databases
-	if (!ytable_empty(agent->exec_log.backup_mysql) ||
-	    !ytable_empty(agent->exec_log.backup_pgsql)) {
+	if (!ytable_empty(agent->exec_log.backup_databases)) {
 		if (!(var = yvar_new_table(NULL))) {
 			st = YENOMEM;
 			goto cleanup;
 		}
 		if ((st = ytable_set_key(root, "db", var)) != YENOERR)
 			goto cleanup;
-		if (!ytable_empty(agent->exec_log.backup_mysql))
-			ytable_foreach(agent->exec_log.backup_mysql, api_report_process_item, var);
-		if (!ytable_empty(agent->exec_log.backup_pgsql))
-			ytable_foreach(agent->exec_log.backup_pgsql, api_report_process_item, var);
+		ytable_foreach(agent->exec_log.backup_databases, api_report_process_item, var);
 	}
 	// statuses
-	if (!agent->exec_log.status_pre_scripts || !agent->exec_log.status_post_scripts ||
-	    !agent->exec_log.status_files || !agent->exec_log.status_databases)
+	if (!agent->exec_log.status_scripts || !agent->exec_log.status_pre_scripts ||
+	    !agent->exec_log.status_post_scripts || !agent->exec_log.status_files ||
+	    !agent->exec_log.status_databases)
 		st_global = false;
 	if (!(var = yvar_new_bool(st_global))) {
 		st = YENOMEM;
@@ -200,8 +197,7 @@ ystatus_t api_backup_report(agent_t *agent) {
 		if ((st = ytable_set_key(root, "st_files", var)) != YENOERR)
 			goto cleanup;
 	}
-	if (!ytable_empty(agent->exec_log.backup_mysql) ||
-	    !ytable_empty(agent->exec_log.backup_pgsql)) {
+	if (!ytable_empty(agent->exec_log.backup_databases)) {
 		if (!(var = yvar_new_bool(agent->exec_log.status_databases))) {
 			st = YENOMEM;
 			goto cleanup;
@@ -568,12 +564,22 @@ static ystatus_t api_report_process_item(uint64_t hash, char *key, void *data, v
 				return (YENOMEM);
 		}
 	}
-	ytable_set_key(yvar_get_table(entry), "s", var);
+	ytable_set_key(yvar_get_table(entry), A_PARAM_KEY_STATUS, var);
 	// set the archive size
 	if (item->success) {
 		if (!(var = yvar_new_int(item->archive_size)))
 			return (YENOMEM);
-		ytable_set_key(yvar_get_table(entry), "sz", var);
+		ytable_set_key(yvar_get_table(entry), A_PARAM_KEY_SIZE, var);
+	}
+	// for databases, add the database type
+	if (item->type == A_ITEM_TYPE_DB_MYSQL ||
+	    item->type == A_ITEM_TYPE_DB_PGSQL ||
+	    item->type == A_ITEM_TYPE_DB_MONGODB) {
+		char *db_type = (item->type == A_ITEM_TYPE_DB_MYSQL) ? A_DB_STR_MYSQL :
+		                (item->type == A_ITEM_TYPE_DB_PGSQL) ? A_DB_STR_PGSQL : A_DB_STR_MONGODB;
+		if (!(var = yvar_new_const_string(db_type)))
+			return (YENOMEM);
+		ytable_set_key(yvar_get_table(entry), A_PARAM_KEY_TYPE, var);
 	}
 	// add the new entry to the list of items (files or databases)
 	return (ytable_set_key(items, item->item, entry));

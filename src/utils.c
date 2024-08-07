@@ -64,7 +64,7 @@ ystr_t get_program_path(const char *bin_name) {
 void check_tar(void) {
 	if (check_program_exists("tar"))
 		return;
-	printf(YANSI_RED "Unable to find 'tar' program on this server." YANSI_RESET "\n\n");
+	printf(YANSI_RED "Unable to find 'tar' program on this computer." YANSI_RESET "\n\n");
 	printf("Please, install " YANSI_GOLD "tar" YANSI_RESET " in a standard location ("
 	       YANSI_PURPLE "/bin/tar" YANSI_RESET ", " YANSI_PURPLE "/usr/bin/tar" YANSI_RESET " or "
 	       YANSI_PURPLE "/usr/local/bin/tar" YANSI_RESET ") and try again.\n");
@@ -76,7 +76,7 @@ void check_tar(void) {
 void check_sha512sum(void) {
 	if (check_program_exists("sha512sum"))
 		return;
-	printf(YANSI_RED "Unable to find 'sha512sum' program on this server." YANSI_RESET "\n\n");
+	printf(YANSI_RED "Unable to find 'sha512sum' program on this computer." YANSI_RESET "\n\n");
 	printf("Please, install " YANSI_GOLD "sha512sum" YANSI_RESET " in a standard location ("
 	       YANSI_PURPLE "/bin/sha512sum" YANSI_RESET ", " YANSI_PURPLE "/usr/bin/sha512sum" YANSI_RESET " or "
 	       YANSI_PURPLE "/usr/local/bin/sha512sum" YANSI_RESET ") and try again.\n");
@@ -97,9 +97,9 @@ void check_z(void) {
 		printf("You may install " YANSI_GOLD "gzip" YANSI_RESET ", " YANSI_GOLD "bzip2" YANSI_RESET ", "
 		       YANSI_GOLD "xz" YANSI_RESET " or " YANSI_GOLD "zstd" YANSI_RESET " in a standard location ("
 		       YANSI_PURPLE "/bin" YANSI_RESET ", " YANSI_PURPLE "/usr/bin" YANSI_RESET " or "
-		       YANSI_PURPLE "/usr/local/bin" YANSI_RESET ") or proceed without compression.\n\n");
+		       YANSI_PURPLE "/usr/local/bin" YANSI_RESET ") or proceed without compression.\n");
 	} else {
-		printf("Here are the compression software installed on this server:\n");
+		printf("Here are the compression software installed on this computer:\n");
 		printf("%s zstd    " YANSI_RESET, (hasZstd ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
 		printf(YANSI_FAINT "(2015) Not much installed; good compression level and very high speed\n" YANSI_RESET);
 		printf("%s xz      " YANSI_RESET, (hasXz ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
@@ -138,7 +138,7 @@ void check_crypt(void) {
 		printf(YANSI_RED "Abort." YANSI_RESET "\n");
 		exit(2);
 	}
-	printf("Here are the encryption software installed on this server:\n");
+	printf("Here are the encryption software installed on this computer:\n");
 	printf("%s gpg      " YANSI_RESET, (hasGpg ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
 	printf(YANSI_FAINT "GNU's implementation of the OpenPGP standard\n" YANSI_RESET);
 	printf("%s scrypt   " YANSI_RESET, (hasScrypt ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
@@ -191,20 +191,25 @@ config_crontab_t check_cron(void) {
 /* Check if database dump programs (mysqldump, pg_dump) are installed. */
 void check_database_dump(void) {
 	bool hasMysqldump = check_program_exists("mysqldump");
-	bool hasPgdump = check_program_exists("pg_dump") && check_program_exists("pg_dumpall");
-	if (hasMysqldump && hasPgdump)
+	bool hasPgdump = check_program_exists("pg_dump");
+	bool hasMongodump = check_program_exists("mongodump");
+	if (hasMysqldump && hasPgdump && hasMongodump)
 		return;
-	if (!hasMysqldump && !hasPgdump) {
-		printf("There is no database dump program installed.\n"
-		       "You will not be able to back up any MySQL or Postgresql database.\n");
-	} else if (!hasMysqldump) {
-		printf("You have " YANSI_FAINT "pg_dump" YANSI_RESET "/" YANSI_FAINT "pg_dumpall" YANSI_RESET
-		       " installed, but not " YANSI_FAINT "mysqldump" YANSI_RESET ".\n"
-		       "Therefore, you will be able to back up PostgreSQL databases but not MySQL databases.\n");
+	if (!hasMysqldump && !hasPgdump && !hasMongodump) {
+		printf(YANSI_RED "Unable to find any database dump program." YANSI_RESET "\n"
+		       "You will not be able to back up any MySQL, Postgresql or MongoDB database.\n\n");
+		printf("You may install " YANSI_GOLD "mysqldump" YANSI_RESET ", " YANSI_GOLD "pg_dump" YANSI_RESET
+		       " or " YANSI_GOLD "mongodump" YANSI_RESET " in a standard location ("
+		       YANSI_PURPLE "/bin" YANSI_RESET ", " YANSI_PURPLE "/usr/bin" YANSI_RESET " or "
+		       YANSI_PURPLE "/usr/local/bin" YANSI_RESET ") or proceed without database backups.\n");
 	} else {
-		printf("You have " YANSI_FAINT "mysqldump" YANSI_RESET " installed, but not "
-		       YANSI_FAINT "pg_dump" YANSI_RESET "/" YANSI_FAINT "pg_dumpall" YANSI_RESET ".\n"
-		       "Therefore, you will be able to back up MySQL databases but not PostgreSQL databases.\n");
+		printf("Here are the database dump software installed on this computer:\n");
+		printf("%s mysqldump   " YANSI_RESET, (hasMysqldump ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
+		printf(YANSI_FAINT "Default backup software for MySQL databases\n" YANSI_RESET);
+		printf("%s pg_dump     " YANSI_RESET, (hasPgdump ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
+		printf(YANSI_FAINT "Default backup software for PostgreSQL databases\n" YANSI_RESET);
+		printf("%s mongodump   " YANSI_RESET, (hasMongodump ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
+		printf(YANSI_FAINT "Default backup software for MongoDB databases\n" YANSI_RESET);
 	}
 	printf("Do you want to continue? [" YANSI_YELLOW "Y" YANSI_RESET "/" YANSI_YELLOW "n" YANSI_RESET "] " YANSI_BLUE);
 	fflush(stdout);
@@ -212,7 +217,7 @@ void check_database_dump(void) {
 	ys_gets(&ys, stdin);
 	printf(YANSI_RESET);
 	ys_trim(ys);
-	bool shouldContinue = (ys_empty(ys) || !strcasecmp(ys, "y") || !strcasecmp(ys, "yees")) ? true : false;
+	bool shouldContinue = (ys_empty(ys) || !strcasecmp(ys, "y") || !strcasecmp(ys, "yes")) ? true : false;
 	ys_free(ys);
 	printf("\n");
 	if (!shouldContinue) {

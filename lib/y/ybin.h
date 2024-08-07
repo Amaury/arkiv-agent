@@ -10,6 +10,7 @@ extern "C" {
 #endif /* __cplusplus || c_plusplus */
 
 #include <stdlib.h>
+#include <stdbool.h>
 #include "ystatus.h"
 
 /**
@@ -74,6 +75,13 @@ ystatus_t ybin_init_bufferized(ybin_t *bin, void *data, size_t bytesize);
  * @return	An allocated ybin_t.
  */
 ybin_t *ybin_clone(ybin_t *bin);
+/**
+ * @function	ybin_empty
+ * @abstract	Tell if a ybin is empty.
+ * @param	bin	Pointer to a ybin_t.
+ * @return	True if the ybin is empty.
+ */
+bool ybin_empty(ybin_t *bin);
 /**
  * @function	ybin_copy
  *		Copy the content of a ybin inside another one.

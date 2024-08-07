@@ -48,16 +48,10 @@ void upload_files(agent_t *agent) {
 			ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
 	}
 	// upload backed up databases
-	if (!ytable_empty(agent->exec_log.backup_mysql)) {
-		ADEBUG("├ " YANSI_FAINT "Upload backed up MySQL databases" YANSI_RESET);
-		st_mysql = ytable_foreach(agent->exec_log.backup_mysql, upload_callback, agent);
+	if (!ytable_empty(agent->exec_log.backup_databases)) {
+		ADEBUG("├ " YANSI_FAINT "Upload backed up databases" YANSI_RESET);
+		st_mysql = ytable_foreach(agent->exec_log.backup_databases, upload_callback, agent);
 		if (st_mysql == YENOERR)
-			ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
-	}
-	if (!ytable_empty(agent->exec_log.backup_pgsql)) {
-		ADEBUG("├ " YANSI_FAINT "Upload backed up PostgreSQL databases" YANSI_RESET);
-		st_pgsql = ytable_foreach(agent->exec_log.backup_pgsql, upload_callback, agent);
-		if (st_pgsql == YENOERR)
 			ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
 	}
 	// log

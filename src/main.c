@@ -105,17 +105,18 @@ void _agent_usage(const char *progname) {
 	printf("\n");
 	printf(
 		YANSI_BOLD "  arkiv-agent " YANSI_RESET
-		"is a program used to backup a computer, using the parameters\n"
-		"  declared on the " YANSI_FAINT "Arkiv.sh" YANSI_RESET
-		" service. It shoud be called automatically (by the\n"
-		"  cron daemon) and not by a user, appart from during its installation process.\n\n"
+		"is a program designed to back up a computer, using the parameters\n"
+		"  defined on the " YANSI_FAINT "Arkiv.sh" YANSI_RESET
+		" service. It shoud be executed automatically by the\n"
+		"  cron daemon and not manually by a user, except during its installation\n"
+		"  process.\n\n"
 	);
 	printf(
 		YANSI_BG_GRAY YANSI_WHITE " Account creation " YANSI_RESET "\n\n"
-		"  Before you install and configure the Arkiv agent, you need to create your\n"
+		"  Before installing and configuring the Arkiv agent, you need to create an\n"
 		"  account on the " YANSI_LINK_STATIC("https://www.arkiv.sh/", "Arkiv.sh") " website. "
-		"Free accounts allow to manage one server.\n"
-		"  You will need to retrieve the " YANSI_FAINT "organization key" YANSI_RESET
+		"Free accounts can manage one host, while paid\n  accounts can manage multiple hosts.\n"
+		"  You will also need to retrieve the " YANSI_FAINT "organization key" YANSI_RESET
 		" provided by the service.\n\n"
 	);
 	printf(
@@ -134,62 +135,63 @@ void _agent_usage(const char *progname) {
 	printf(
 		YANSI_BG_GRAY YANSI_WHITE " Execution mode " YANSI_RESET "\n\n"
 		YANSI_YELLOW "  help\n" YANSI_RESET
-		"  Display this help. Same effect if the mode is not specified.\n\n"
+		"  Displays this help. This is also the default if no mode is specified.\n\n"
 		YANSI_YELLOW "  version\n" YANSI_RESET
-		"  Display the version number of the installed agent.\n\n"
+		"  Displays the version number of the installed agent.\n\n"
 		YANSI_YELLOW "  config\n" YANSI_RESET
-		"  Ask questions in order to create the Arkiv configuration file, then declare\n"
-		"  the local machine up to the Arkiv.sh service.\n\n"
+		"  Prompts for information to create the Arkiv configuration file and then\n"
+		"  delcares the local machine to the Arkiv.sh service.\n\n"
 		YANSI_YELLOW "  declare\n" YANSI_RESET
-		"  Declare the local server to the Arkiv.sh service.\n"
-		"  Useful when the configuration is cloned and the " YANSI_YELLOW "config" YANSI_RESET
-		" command was not used.\n\n"
+		"  Declares the local machine to the Arkiv.sh service.\n"
+		"  Useful if the configuration is cloned and the " YANSI_FAINT "config" YANSI_RESET
+		" mode was not used.\n\n"
 		YANSI_YELLOW "  backup\n" YANSI_RESET
-		"  Perform the backup configured on Arkiv.sh service for this machine.\n"
+		"  Performs the backup configured on the Arkiv.sh service for this machine.\n"
 		"  SHould be called by the cron daemon only.\n\n"
-		YANSI_YELLOW "  restore latest|identifier\n" YANSI_RESET
-		"  Perform the restore of the lastest backup or the backup with the\n"
-		"  given identifier.\n\n"
+		//YANSI_YELLOW "  restore latest|identifier\n" YANSI_RESET
+		//"  Perform the restore of the lastest backup or the backup with the\n"
+		//"  given identifier.\n\n"
 	);
 	printf(
 		YANSI_BG_GRAY YANSI_WHITE " Environment variables " YANSI_RESET "\n\n"
 		YANSI_RED "  Path to the configuration file\n" YANSI_RESET
 		YANSI_BOLD "  conf" YANSI_RESET "=/path/to/conf.json\n"
-		YANSI_FAINT "  Default value: " YANSI_RESET YANSI_CYAN "/opt/arkiv/etc/agent.json\n\n" YANSI_RESET
+		YANSI_FAINT "  Defines the path to the configuration file to use in place of the default one.\n" YANSI_RESET
+		YANSI_FAINT "  Default value: " YANSI_CYAN "/opt/arkiv/etc/agent.json\n\n" YANSI_RESET
 
 		YANSI_RED "  Path to the log file\n" YANSI_RESET
 		YANSI_BOLD "  logfile" YANSI_RESET "=/path/to/file.log\n"
-		YANSI_FAINT "  Use the value " YANSI_RESET YANSI_YELLOW "/dev/null" YANSI_RESET YANSI_FAINT " to disable file-based logging.\n"
-		"  Default value: " YANSI_RESET YANSI_CYAN "/var/log/arkiv-agent.log\n\n" YANSI_RESET
+		YANSI_FAINT "  Use " YANSI_RESET YANSI_YELLOW "/dev/null" YANSI_RESET YANSI_FAINT " to disable file-based logging.\n" YANSI_RESET
+		"  Default value: " YANSI_CYAN "/var/log/arkiv-agent.log\n\n" YANSI_RESET
 
 		YANSI_RED "  Enabling log on syslog\n" YANSI_RESET
 		YANSI_BOLD "  syslog" YANSI_RESET "=true\n"
-		YANSI_FAINT "  Sets the log to syslog, in addition to other logging mechanisms.\n"
-		"  Default value: " YANSI_RESET YANSI_CYAN "false\n\n" YANSI_RESET
+		YANSI_FAINT "  Enables logging to syslog in addition to other logging mechanisms.\n" YANSI_RESET
+		"  Default value: " YANSI_CYAN "false\n\n" YANSI_RESET
 
 		YANSI_RED "  Activation of the debug mode\n" YANSI_RESET
 		YANSI_BOLD "  debug" YANSI_RESET "=true\n"
-		YANSI_FAINT "  Set log level to 'DEBUG' (the program writes more log messages).\n"
-		"  Default value: " YANSI_RESET YANSI_CYAN "false\n\n" YANSI_RESET
+		YANSI_FAINT "  Sets the log level to DEBUG, causing the program to write more log messages.\n" YANSI_RESET
+		"  Default value: " YANSI_CYAN "false\n\n" YANSI_RESET
 
 		YANSI_RED "  Log on STDOUT\n" YANSI_RESET
 		YANSI_BOLD "  stdout" YANSI_RESET "=true\n"
-		YANSI_FAINT "  Activate log on the standard output of the program.\n"
-		"  Default value: " YANSI_RESET YANSI_CYAN "false\n\n" YANSI_RESET
+		YANSI_FAINT "  Activates logging to the program's standard output.\n" YANSI_RESET
+		"  Default value: " YANSI_CYAN "false\n\n" YANSI_RESET
 
 		YANSI_RED "  Path to the archives directory\n" YANSI_RESET
 		YANSI_BOLD "  archives_path" YANSI_RESET "=/path/to/dir\n"
-		YANSI_FAINT "  Path to the directory where local archives will be created\n"
-		"  Default value: " YANSI_RESET YANSI_CYAN "/var/archives\n\n" YANSI_RESET
+		YANSI_FAINT "  Specifies the directory where local archives will be created.\n" YANSI_RESET
+		"  Default value: " YANSI_CYAN "/var/archives\n\n" YANSI_RESET
 
 		YANSI_RED "  Encryption password\n" YANSI_RESET
 		YANSI_BOLD "  crypt_pwd" YANSI_RESET "=...(40 characters-long password)...\n"
-		YANSI_FAINT "  Used to override the encryption password defined in the configuration file.\n\n" YANSI_RESET
+		YANSI_FAINT "  Overrides the encryption password defined in the configuration file.\n\n" YANSI_RESET
 
 		YANSI_RED "  Disable ANSI sequences in log file\n" YANSI_RESET
 		YANSI_BOLD "  ansi" YANSI_RESET "=false\n"
-		YANSI_FAINT "  Set to " YANSI_RESET "false" YANSI_FAINT " to disable ANSI control sequences (color, bold…) in log file.\n" YANSI_RESET
-		"  Default value: " YANSI_RESET YANSI_CYAN "true\n\n" YANSI_RESET
+		YANSI_FAINT "  Set to " YANSI_RESET "false" YANSI_FAINT " to disable ANSI control sequences (color, etc.) in the log file.\n" YANSI_RESET
+		"  Default value: " YANSI_CYAN "true\n\n" YANSI_RESET
 	);
 	printf(
 		YANSI_BG_GRAY YANSI_WHITE " Examples " YANSI_RESET "\n\n"
@@ -211,22 +213,22 @@ void _agent_usage(const char *progname) {
 		YANSI_FAINT "  debug=true logfile=/root/arkiv.log " YANSI_RESET
 		YANSI_GREEN "/opt/arkiv/bin/agent " YANSI_RESET
 		YANSI_YELLOW "backup\n\n" YANSI_RESET
-		"  Write log on syslog:\n"
+		"  Write logs to syslog:\n"
 		YANSI_FAINT "  syslog=true " YANSI_RESET
 		YANSI_GREEN "/opt/arkiv/bin/agent " YANSI_RESET
 		YANSI_YELLOW "backup\n\n" YANSI_RESET
 	);
 	printf(
 		YANSI_BG_GRAY YANSI_WHITE " Copyright, licence and source code " YANSI_RESET "\n\n"
-		"  The Arkiv agent's source code is copyright © " YANSI_LINK_STATIC("mailto:amaury@amaury.net", "Amaury Bouchard") ".\n\n"
+		"  The Arkiv agent's source code is © " YANSI_LINK_STATIC("mailto:amaury@amaury.net", "Amaury Bouchard") ".\n\n"
 		"  It is released under the terms of the "
 		YANSI_LINK_STATIC("https://joinup.ec.europa.eu/collection/eupl", "European Union Public Licence")
 		" (EUPL),\n"
-		"  version 1.2 or later. This licence is officially available in 23 languages,\n"
-		"  and is compatible with other well-known licences: GPL (v2, v3), AGPL (v3),\n"
-		"  LGPL (v2.1, v3), CC BY-SA (v3), MPL (v2), EPL (v1), OSL (v2.1, v3), LiLiQ-R\n"
-		"  and LiLiQ-R+, CeCILL (v2.0, v2.1) and many " YANSI_LINK_STATIC("https://joinup.ec.europa.eu/collection/eupl/matrix-eupl-compatible-open-source-licences", "other OSI-approved licences") ".\n\n"
-		"  Arkiv agent's source code could be find here: " YANSI_LINK_STATIC("https://developers.arkiv.sh", "https://developers.arkiv.sh") "\n\n"
+		"  version 1.2 or later. This licence is officially available in 23 languages\n"
+		"  and is compatible with other well-known licences, including GPL (v2, v3),\n"
+		"  AGPL (v3), LGPL (v2.1, v3), CC BY-SA (v3), MPL (v2), EPL (v1), OSL (v2.1, v3),\n"
+		"  LiLiQ-R and LiLiQ-R+, CeCILL (v2.0, v2.1) and many " YANSI_LINK_STATIC("https://joinup.ec.europa.eu/collection/eupl/matrix-eupl-compatible-open-source-licences", "other OSI-approved licences") ".\n\n"
+		"  The Arkiv agent's source code can be found here: " YANSI_LINK_STATIC("https://developers.arkiv.sh", "https://developers.arkiv.sh") "\n\n"
 	);
 }
 

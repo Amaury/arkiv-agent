@@ -109,7 +109,7 @@ log_item_t *log_create_mysql(agent_t *agent, ystr_t dbname) {
 	log_item_t *log = malloc0(sizeof(log_item_t));
 	if (!log)
 		return (NULL);
-	log->type = A_ITEM_TYPE_MYSQL;
+	log->type = A_ITEM_TYPE_DB_MYSQL;
 	log->item = dbname;
 	log->success = true;
 	log->dump_status = YEUNDEF;
@@ -117,7 +117,7 @@ log_item_t *log_create_mysql(agent_t *agent, ystr_t dbname) {
 	log->encrypt_status = YEUNDEF;
 	log->checksum_status = YEUNDEF;
 	log->upload_status = YEUNDEF;
-	ytable_add(agent->exec_log.backup_mysql, log);
+	ytable_add(agent->exec_log.backup_databases, log);
 	return (log);
 }
 /* Creates a log entry for a PostgreSQL database backup. */
@@ -125,7 +125,7 @@ log_item_t *log_create_pgsql(agent_t *agent, ystr_t dbname) {
 	log_item_t *log = malloc0(sizeof(log_item_t));
 	if (!log)
 		return (NULL);
-	log->type = A_ITEM_TYPE_PGSQL;
+	log->type = A_ITEM_TYPE_DB_PGSQL;
 	log->item = dbname;
 	log->success = true;
 	log->dump_status = YEUNDEF;
@@ -133,7 +133,7 @@ log_item_t *log_create_pgsql(agent_t *agent, ystr_t dbname) {
 	log->encrypt_status = YEUNDEF;
 	log->checksum_status = YEUNDEF;
 	log->upload_status = YEUNDEF;
-	ytable_add(agent->exec_log.backup_pgsql, log);
+	ytable_add(agent->exec_log.backup_databases, log);
 	return (log);
 }
 

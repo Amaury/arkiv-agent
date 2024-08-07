@@ -13,6 +13,7 @@ extern "C" {
 #include <sys/stat.h>
 #include <stdint.h>
 #include "ybin.h"
+#include "ystr.h"
 
 /**
  * @function	yfile_exists
