@@ -15,7 +15,7 @@
 #include "yarray.h"
 #include "ytable.h"
 
-/** @const A_AGENT_VERSION	Version of the agent. */
+/** @const A_AGENT_VERSION	Version of the agent (version of the compatible parameters file). */
 #define A_AGENT_VERSION	1.0
 
 /* ********** COMMAND-LINE OPTIONS ********** */
@@ -198,6 +198,8 @@
 #define A_PARAM_KEY_STATUS			"s"
 /** @const A_PARAM_KEY_SIZE			Key to a file size. */
 #define A_PARAM_KEY_SIZE			"sz"
+/** @const A_PARAM_KEY_AUTH_DATABASE		Key to an authentication database. */
+#define A_PARAM_KEY_AUTH_DATABASE		"ad"
 
 /* ********** ENCRYPTION METHOD PARAM CHARACTERS ********** */
 /** @const A_CRYPT_OPENSSL	OpenSSL. */

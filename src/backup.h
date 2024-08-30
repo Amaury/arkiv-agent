@@ -137,6 +137,14 @@ void exec_backup(agent_t *agent);
 	 */
 	static ystatus_t backup_pgsql(agent_t *agent, ytable_t *db_data);
 	/**
+	 * @function	backup_mongodb
+	 * @abstract	Backup a MongoDB database.
+	 * @param	agent	Pointer to the agent structure.
+	 * @param	db_data	Pointer to the table which contains the database configuration.
+	 * @return	YENOERR if the database was dumped and compressed successfully.
+	 */
+	static ystatus_t backup_mongodb(agent_t *agent, ytable_t *db_data);
+	/**
 	 * @function	backup_encrypt
 	 * @abstract	Encrypt each backed up file.
 	 * @param	agent	Pointer to the agent structure.

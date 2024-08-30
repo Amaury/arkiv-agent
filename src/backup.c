@@ -774,7 +774,8 @@ static ystatus_t backup_database(uint64_t hash, char *key, void *data, void *use
 				return (YEIO);
 			}
 		}
-		return (YENOERR);
+		// dump database
+		return (backup_mongodb(agent, db_data));
 	} else {
 		ALOG("└ " YANSI_RED "Error (bad '%s' type parameter)" YANSI_RESET, dbtype);
 		return (YEBADCONF);
@@ -1004,6 +1005,112 @@ cleanup:
 	ys_free(dbport_str);
 	yarray_free(args);
 	yarray_free(env);
+	free0(tmp_file);
+	return (status);
+}
+/* Backup a MongoDB database. */
+static ystatus_t backup_mongodb(agent_t *agent, ytable_t *db_data) {
+	ystatus_t status = YENOERR;
+	log_item_t *log = NULL;
+	ystr_t dbname = NULL;
+	ystr_t dbuser = NULL;
+	ystr_t dbpwd = NULL;
+	ystr_t dbhost = NULL;
+	int64_t dbport = 0;
+	ystr_t dbauthdb = NULL;
+	ystr_t dbport_str = NULL;
+	ystr_t filename = NULL;
+	yarray_t args = NULL;
+	char *tmp_file = NULL;
+
+	// extract parameters and check them
+	if (!(dbname = yvar_get_string(ytable_get_key_data(db_data, A_PARAM_KEY_DB))) ||
+	    !(dbuser = yvar_get_string(ytable_get_key_data(db_data, A_PARAM_KEY_USER))) ||
+	    !(dbpwd = yvar_get_string(ytable_get_key_data(db_data, A_PARAM_KEY_USER))) ||
+	    !(dbhost = yvar_get_string(ytable_get_key_data(db_data, A_PARAM_KEY_HOST))) ||
+	    !(dbport = yvar_get_int(ytable_get_key_data(db_data, A_PARAM_KEY_PORT)))) {
+		ALOG("└ " YANSI_RED "Failed (bad parameter)" YANSI_RESET);
+		status = YEBADCONF;
+		goto cleanup;
+	}
+	dbauthdb = yvar_get_string(ytable_get_key_data(db_data, A_PARAM_KEY_AUTH_DATABASE));
+	// log message
+	ALOG("├ " YANSI_FAINT "MongoDB database " YANSI_RESET "%s", dbname);
+	// creation of the log entry
+	if (!(log = log_create_pgsql(agent, dbname))) {
+		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
+		status = YENOMEM;
+		goto cleanup;
+	}
+	log->success = true;
+	// create mongodump command
+	filename = ys_filenamize(dbname);
+	if (!filename ||
+	    !(log->archive_name = ys_printf(NULL, "%s.dump", filename)) ||
+	    !(log->archive_path = ys_printf(NULL, "%s/%s", agent->backup_mysql_path, log->archive_name)) ||
+	    !(dbport_str = ys_printf(NULL, "%d", (int)dbport)) ||
+	    !(args = yarray_create(11))) {
+		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
+		status = log->dump_status = YENOMEM;
+		goto cleanup;
+	}
+	if (!(tmp_file = yfile_tmp(log->archive_path))) {
+		ALOG("│ └ " YANSI_RED "Unable to create temporary file" YANSI_RESET);
+		status = log->dump_status = YEIO;
+		goto cleanup;
+	}
+	yarray_push_multi(
+		&args,
+		11,
+		"--username",
+		dbuser,
+		"--hiost",
+		dbhost,
+		"--port",
+		dbport,
+		"--db",
+		dbname,
+		"--out",
+		tmp_file,
+		"--password"
+	);
+	if (!dbauthdb) {
+		yarray_push(&args, "--authenticationDatabase");
+		yarray_push(&args, dbauthdb);
+	}
+	// execution
+	ADEBUG("│ ├ " YANSI_FAINT "Execute " YANSI_RESET "mongodump" YANSI_FAINT " to " YANSI_RESET "%s", log->archive_path);
+	status = yexec_stdin(agent->bin.mongodump, args, NULL, dbpwd, NULL, NULL, NULL, NULL);
+	if (status != YENOERR) {
+		ALOG("│ └ " YANSI_RED "mongodump error" YANSI_RESET);
+		log->dump_status = status;
+		unlink(tmp_file);
+		goto cleanup;
+	}
+	ADEBUG("│ ├ " YANSI_GREEN "Done" YANSI_RESET);
+	// set log status
+	log->dump_status = YENOERR;
+	// move the file to its destination
+	if (rename(tmp_file, log->archive_path)) {
+		ALOG("│ └ " YANSI_RED "Unable to move file " YANSI_RESET "%s" YANSI_RED " to " YANSI_RED "%s" YANSI_RESET, tmp_file, log->archive_path);
+		status = log->dump_status = YEIO;
+		unlink(tmp_file);
+		goto cleanup;
+	}
+	// compression of the file
+	status = backup_compress_file(agent, log);
+	// get archive file's size
+	log->archive_size = yfile_get_size(log->archive_path);
+cleanup:
+	if (status != YENOERR) {
+		agent->exec_log.status_databases = false;
+		ALOG("└ " YANSI_RED "Failed" YANSI_RESET);
+	}
+	if (log)
+		log->success = (status == YENOERR) ? true : false;
+	ys_free(filename);
+	ys_free(dbport_str);
+	yarray_free(args);
 	free0(tmp_file);
 	return (status);
 }

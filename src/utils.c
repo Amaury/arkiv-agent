@@ -211,7 +211,7 @@ void check_database_dump(void) {
 		printf("%s mongodump   " YANSI_RESET, (hasMongodump ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
 		printf(YANSI_FAINT "Default backup software for MongoDB databases\n" YANSI_RESET);
 	}
-	printf("Do you want to continue? [" YANSI_YELLOW "Y" YANSI_RESET "/" YANSI_YELLOW "n" YANSI_RESET "] " YANSI_BLUE);
+	printf("\nDo you want to continue? [" YANSI_YELLOW "Y" YANSI_RESET "/" YANSI_YELLOW "n" YANSI_RESET "] " YANSI_BLUE);
 	fflush(stdout);
 	ystr_t ys = NULL;
 	ys_gets(&ys, stdin);
