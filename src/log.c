@@ -61,7 +61,11 @@ void alog(agent_t *agent, bool debug, bool show_time, const char *str, ...) {
 	}
 	// write to syslog
 	if (agent->conf.use_syslog) {
-		vsyslog(LOG_NOTICE, ansi_free, plist3);
+		// if len is not zero, there is date and time at the beginning of the string,
+		// so we take 26 bytes after the beginning of the ansi_free string; we can't use
+		// the len variable because it counts ANSI characters wich are not in ansi_free
+		pt = ansi_free + (len ? 26 : 0);
+		vsyslog(LOG_NOTICE, pt, plist3);
 	}
 	va_end(plist);
 	va_end(plist2);
