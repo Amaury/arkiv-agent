@@ -157,16 +157,16 @@ static ystatus_t backup_purge_local(agent_t *agent) {
 	ADEBUG("├ " YANSI_FAINT "Delete archives older than %d hours" YANSI_RESET, agent->param.local_retention_hours);
 	yarray_push_multi(
 		&args,
-		4,
+		3,
 		agent->conf.archives_path,
 		"-type",
-		"f",
-		"-delete"
+		"f"
 	);
 	if (agent->param.local_retention_hours > 0) {
 		ys = ys_printf(NULL, "+%d", (agent->param.local_retention_hours * 60));
 		yarray_push_multi(&args, 2, "-mmin", ys);
 	}
+	yarray_push(&args, "-delete");
 	status = yexec(agent->bin.find, args, NULL, NULL, NULL);
 	if (status == YENOERR) {
 		ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
@@ -403,16 +403,16 @@ static ystatus_t backup_fetch_params(agent_t *agent) {
 	var_ptr2 = yvar_get_from_path(savepack, A_PARAM_PATH_FILE);
 	if (var_ptr2 && yvar_is_table(var_ptr2)) {
 		agent->param.files = yvar_get_table(var_ptr2);
-		ADEBUG("│ └ %d" YANSI_FAINT " file(s)" YANSI_RESET, ytable_length(agent->param.files));
+		ADEBUG("│ ├ %d" YANSI_FAINT " file(s)" YANSI_RESET, ytable_length(agent->param.files));
 	} else
-		ADEBUG("│ └ " YANSI_FAINT "No file" YANSI_RESET);
+		ADEBUG("│ ├ " YANSI_FAINT "No file" YANSI_RESET);
 	// get databases
 	var_ptr2 = yvar_get_from_path(savepack, A_PARAM_PATH_DB);
 	if (var_ptr2 && yvar_is_table(var_ptr2)) {
 		agent->param.databases = yvar_get_table(var_ptr2);
-		ADEBUG("│ ├ %d" YANSI_FAINT " database(s)" YANSI_RESET, ytable_length(agent->param.databases));
+		ADEBUG("│ └ %d" YANSI_FAINT " database(s)" YANSI_RESET, ytable_length(agent->param.databases));
 	} else
-		ADEBUG("│ ├ " YANSI_FAINT "No database" YANSI_RESET);
+		ADEBUG("│ └ " YANSI_FAINT "No database" YANSI_RESET);
 
 	// search the storage
 	ADEBUG("├ " YANSI_FAINT "Search for the storage from its ID" YANSI_RESET);
@@ -465,9 +465,6 @@ static ystatus_t backup_exec_scripts(agent_t *agent, script_type_t type) {
 	ytable_t *scripts;
 	ytable_function_t callback;
 
-	// check if scripts are allowed
-	if (!agent->conf.scripts_allowed)
-		return (YEPERM);
 	// use the pre- or post-list
 	if (type == A_SCRIPT_TYPE_PRE) {
 		scripts = agent->param.pre_scripts;
@@ -479,6 +476,9 @@ static ystatus_t backup_exec_scripts(agent_t *agent, script_type_t type) {
 	// check if there are some scripts to execute
 	if (!scripts || !ytable_length(scripts))
 		return (YENOERR);
+	// check if scripts are allowed
+	if (!agent->conf.scripts_allowed)
+		return (YEPERM);
 	// log message
 	if (type == A_SCRIPT_TYPE_PRE)
 		ALOG("Execute pre-scripts");
@@ -711,7 +711,7 @@ static ystatus_t backup_database(uint64_t hash, char *key, void *data, void *use
 		/* MySQL database */
 		// check if mysqldump is available
 		if (!agent->bin.mysqldump) {
-			ALOG("└ " YANSI_RED "Error (mysqldump not installed)" YANSI_RESET);
+			ALOG("└ " YANSI_RED "Error (mysqldump is not installed)" YANSI_RESET);
 			return (YENOEXEC);
 		}
 		// create output directory if needed
@@ -734,7 +734,7 @@ static ystatus_t backup_database(uint64_t hash, char *key, void *data, void *use
 		/* PostgreSQL database */
 		// check if pg_dump is available
 		if (!agent->bin.pg_dump) {
-			ALOG("└ " YANSI_RED "Error (pg_dump not installed)" YANSI_RESET);
+			ALOG("└ " YANSI_RED "Error (pg_dump is not installed)" YANSI_RESET);
 			return (YENOEXEC);
 		}
 		// create output directory if needed
@@ -757,7 +757,7 @@ static ystatus_t backup_database(uint64_t hash, char *key, void *data, void *use
 		/* MongoDB database */
 		// check if mongodump is available
 		if (!agent->bin.mongodump) {
-			ALOG("└ " YANSI_RED "Error (mongodump not installed)" YANSI_RESET);
+			ALOG("└ " YANSI_RED "Error (mongodump is not installed)" YANSI_RESET);
 			return (YENOEXEC);
 		}
 		// create output directory if needed
@@ -1134,11 +1134,15 @@ static void backup_encrypt_files(agent_t *agent) {
 	if (agent->exec_log.backup_files && !ytable_empty(agent->exec_log.backup_files)) {
 		ADEBUG("├ " YANSI_FAINT "Encrypt backed up files" YANSI_RESET);
 		st_files = ytable_foreach(agent->exec_log.backup_files, backup_encrypt_item, agent);
+		if (st_files == YENOERR)
+			ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
 	}
 	// encrypt backed up databases
 	if (!ytable_empty(agent->exec_log.backup_databases)) {
 		ADEBUG("├ " YANSI_FAINT "Encrypt backed up databases" YANSI_RESET);
 		st_db = ytable_foreach(agent->exec_log.backup_databases, backup_encrypt_item, agent);
+		if (st_db == YENOERR)
+			ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
 	}
 	// return status
 	if (st_files == YENOERR && st_db == YENOERR)
@@ -1250,7 +1254,6 @@ static ystatus_t backup_encrypt_item(uint64_t hash, char *key, void *data, void 
 		item->success = false;
 		goto cleanup;
 	}
-	ADEBUG("│ └ " YANSI_GREEN "Done" YANSI_RESET);
 	// remove unencrypted file
 	unlink(item->archive_path);
 	// set log status
@@ -1281,13 +1284,14 @@ static ystatus_t backup_compress_file(agent_t *agent, log_item_t *log) {
 	yarray_t args = NULL;
 	ystr_t z_name = NULL, z_path = NULL;
 
-	// chec if a compression is needed
+	// check if compression is needed
 	if (agent->param.compression == A_COMP_NONE ||
 	    !log->success)
 		return (YENOERR);
+	ADEBUG("│ ├ " YANSI_FAINT "Compress file " YANSI_RESET "%s", log->archive_path);
 	// create compression command
 	if (!(args = yarray_create(4))) {
-		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
+		ALOG("│ │ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
 		status = YENOMEM;
 		log->compress_status = status;
 		log->success = false;
@@ -1297,10 +1301,9 @@ static ystatus_t backup_compress_file(agent_t *agent, log_item_t *log) {
 		yarray_push(&args, "--rm");
 	yarray_push_multi(&args, 3, "--quiet", "--force", log->archive_path);
 	// execution
-	ADEBUG("│ ├ " YANSI_FAINT "Compress file " YANSI_RESET "%s", log->archive_path);
 	status = yexec(agent->bin.z, args, NULL, NULL, NULL);
 	if (status != YENOERR) {
-		ALOG("│ └ " YANSI_RED "Compression error" YANSI_RESET);
+		ALOG("│ │ └ " YANSI_RED "Compression error" YANSI_RESET);
 		log->compress_status = status;
 		log->success = false;
 		goto cleanup;
@@ -1321,7 +1324,7 @@ static ystatus_t backup_compress_file(agent_t *agent, log_item_t *log) {
 	z_name = ys_printf(NULL, "%s.%s", log->archive_name, ext);
 	z_path = ys_printf(NULL, "%s.%s", log->archive_path, ext);
 	if (!z_name || !z_path) {
-		ALOG("│ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
+		ALOG("│ │ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
 		status = YENOMEM;
 		log->compress_status = status;
 		log->success = false;
@@ -1385,7 +1388,7 @@ static ystatus_t backup_compute_checksum_item(uint64_t hash, char *key, void *da
 
 	if (!item->success)
 		return (YENOERR);
-	ADEBUG("├ " YANSI_FAINT "Compute checksum of " YANSI_RESET "%s", item->archive_path);
+	ADEBUG("│ ├ " YANSI_FAINT "Compute checksum of " YANSI_RESET "%s", item->archive_path);
 	// change working directory
 	char *working_dir = NULL;
 	if (item->type == A_ITEM_TYPE_FILE)
@@ -1397,13 +1400,13 @@ static ystatus_t backup_compute_checksum_item(uint64_t hash, char *key, void *da
 	else if (item->type == A_ITEM_TYPE_DB_MONGODB)
 		working_dir = agent->backup_mongodb_path;
 	if (!working_dir || chdir(working_dir)) {
-		ALOG("└ " YANSI_RED "Unable to change working directory to '" YANSI_RESET "%s" YANSI_RED "'" YANSI_RESET, working_dir);
+		ALOG("│ │ └ " YANSI_RED "Unable to change working directory to '" YANSI_RESET "%s" YANSI_RED "'" YANSI_RESET, working_dir);
 		status = YEIO;
 		goto end;
 	}
 	// create argument list
 	if (!(args = yarray_create(1))) {
-		ALOG("└ " YANSI_RED "Memory allocation error" YANSI_RESET);
+		ALOG("│ │ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
 		status = YENOMEM;
 		goto end;
 	}
@@ -1411,19 +1414,19 @@ static ystatus_t backup_compute_checksum_item(uint64_t hash, char *key, void *da
 	// execution
 	status = yexec(agent->bin.checksum, args, NULL, &bin, NULL);
 	if (status != YENOERR || !bin.bytesize) {
-		ALOG("└ " YANSI_RED "Checksum error" YANSI_RESET);
+		ALOG("│ │ └ " YANSI_RED "Checksum error" YANSI_RESET);
 		status = YENOEXEC;
 		goto end;
 	}
 	// write result
 	if (!(item->checksum_name = ys_printf(NULL, "%s.sha512", item->archive_name)) ||
 	    !(item->checksum_path = ys_printf(NULL, "%s.sha512", item->archive_path))) {
-		ALOG("└ " YANSI_RED "Memory allocation error" YANSI_RESET);
+		ALOG("│ │ └ " YANSI_RED "Memory allocation error" YANSI_RESET);
 		status = YENOMEM;
 		goto end;
 	}
 	if (!yfile_put_contents(item->checksum_path, &bin)) {
-		ALOG("└ " YANSI_RED "Unable to write checksum result to " YANSI_RESET "%s", item->checksum_path);
+		ALOG("│ │ └ " YANSI_RED "Unable to write checksum result to " YANSI_RESET "%s", item->checksum_path);
 		status = YENOMEM;
 		goto end;
 	}
