@@ -449,7 +449,7 @@ agent_t *agent_new(char *exe_path);
 ystr_t agent_getenv(char *envvar, ystr_t default_value);
 /**
  * @function	agent_getenv_static
- * @abstract	Returns a copy of an environment varialbe, or a copy of a default value.
+ * @abstract	Returns a copy of an environment variable, or a copy of a default value.
  * @param	envvar		Name of the environment variable.
  * @param	default_value	The default value, copied if the environment variable is not found.
  * @return	The value.
