@@ -84,7 +84,7 @@ if [ "$USER" != "root" ]; then
 	echo "$(ansi red)Abort$(ansi reset)"
 	exit 1
 fi
-
+# check the '/opt/arkiv' directory
 if [ -d "/opt/arkiv" ]; then
 	echo "The directory $(ansi dim)/opt/arkiv$(ansi reset) already exists."
 	read -p "Update it? [y/N] " ANSWER
@@ -104,6 +104,7 @@ else
 	fi
 	echo "$(ansi green)Done$(ansi reset)"
 fi
+# copy executable programs
 echo -n "Copy executables... "
 cp ./arkiv_agent /opt/arkiv/bin/ && cp ./rclone /opt/arkiv/bin/
 if [ $? -ne 0 ]; then
@@ -118,6 +119,6 @@ echo "You can launch it whenever you want with this command: $(ansi dim)/opt/ark
 echo
 read -p "Press ENTER when ready" ANSWER
 echo -n "$(ansi up)$(ansi up)"
-
+# launch agent configuration
 /opt/arkiv/bin/arkiv_agent config
 
