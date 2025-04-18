@@ -139,7 +139,7 @@ static ystatus_t upload_item_aws_s3(uint64_t hash, char *key, void *data, void *
 	// bucket
 	bucket = yvar_get_string(ytable_get_key_data(agent->param.storage, A_PARAM_KEY_BUCKET));
 	if (!bucket || ys_empty(bucket)) {
-		ADEBUG("│ ├ " YANSI_RED "Unable to find bucket" YANSI_RESET);
+		ADEBUG("│ ├ " YANSI_RED "No S3 bucket given." YANSI_RESET);
 		status = YEBADCONF;
 		goto cleanup;
 	}
@@ -180,6 +180,7 @@ static ystatus_t upload_item_aws_s3(uint64_t hash, char *key, void *data, void *
 		item->success = false;
 		goto cleanup;
 	}
+	ADEBUG("│ │ └ " YANSI_FAINT "To " YANSI_RESET "%s", dest_path);
 	// create argument list for backed up file
 	if (!(args = yarray_create(2))) {
 		ADEBUG("│ ├ " YANSI_RED "Memory allocation error" YANSI_RESET);
@@ -222,6 +223,7 @@ static ystatus_t upload_item_aws_s3(uint64_t hash, char *key, void *data, void *
 	args[2] = dest_path;
 	// upload the checksum file
 	ADEBUG("│ ├ " YANSI_FAINT "Upload checksum file " YANSI_RESET "%s", item->checksum_path);
+	ADEBUG("│ │ └ " YANSI_FAINT "To " YANSI_RESET "%s", dest_path);
 	status = yexec(A_EXE_RCLONE, args, agent->param.storage_env, NULL, NULL);
 	if (status != YENOERR) {
 		ADEBUG("│ └ " YANSI_RED "Failed" YANSI_RESET);
