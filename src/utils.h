@@ -63,4 +63,9 @@ config_crontab_t check_cron(void);
  * @abstract	Checks if database dump programs (mysqldump, pg_dump) are installed.
  */
 void check_database_dump(void);
+/**
+ * @function	check_rclone
+ * @abstract	Checks if the rclone program is installed.
+ */
+void check_rclone(void);
 

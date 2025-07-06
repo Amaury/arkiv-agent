@@ -16,7 +16,7 @@
 #include "ytable.h"
 
 /** @const A_AGENT_VERSION	Version of the agent (version of the compatible parameters file). */
-#define A_AGENT_VERSION	1.0
+#define A_AGENT_VERSION	0.2
 
 /* ********** COMMAND-LINE OPTIONS ********** */
 /** @const A_OPT_VERSION	CLI option for version number display. */
@@ -29,22 +29,38 @@
 #define	A_OPT_BACKUP		"backup"
 /** @const A_OPT_RESTORE	CLI option for restore. */
 #define	A_OPT_RESTORE		"restore"
+
+/* ********** ENVIRONMENT VARIABLES ********** */
 /** @const A_ENV_CONF		Environment variable for the configuration file's path. */
 #define A_ENV_CONF		"conf"
-/** @const A_ENV_LOGFILE	Environment variable for the log file's path. */
-#define A_ENV_LOGFILE		"logfile"
-/** @const A_ENV_STDOUT		Environment variable for STDOUT usage. */
-#define A_ENV_STDOUT		"stdout"
-/** @const A_ENV_SYSLOG		Environment variable for syslog usage. */
-#define A_ENV_SYSLOG		"syslog"
-/** @const A_ENV_DEBUG_MODE	Environment variable for the debug mode. */
-#define A_ENV_DEBUG_MODE	"debug"
+/** @const A_ENV_HOSTNAME	Environment variable for the host name. */
+#define A_ENV_HOSTNAME		"hostname"
+/** @const A_ENV_STANDALONE	Environment variable to standalone mode. */
+#define A_ENV_STANDALONE	"standalone"
+/** @const A_ENV_ORG_KEY	Environment variable for organization key. */
+#define A_ENV_ORG_KEY		"org_key"
+/** @const A_ENV_SCRIPTS	Environment variable for scripts authorization. */
+#define A_ENV_SCRIPTS		"scripts"
 /** @const A_ENV_ARCHIVES_PATH	Environment variable for the local archives path. */
 #define A_ENV_ARCHIVES_PATH	"archives_path"
-/** @const A_ENV_CRYPT_PWD	Environment variable for the encryption password. */
-#define A_ENV_CRYPT_PWD		"crypt_pwd"
+/** @const A_ENV_LOGFILE	Environment variable for the log file's path. */
+#define A_ENV_LOGFILE		"logfile"
+/** @const A_ENV_SYSLOG		Environment variable for syslog usage. */
+#define A_ENV_SYSLOG		"syslog"
+/** @const A_ENV_STDOUT		Environment variable for STDOUT usage. */
+#define A_ENV_STDOUT		"stdout"
 /** @const A_ENV_ANSI		Environment variable for ANSI control characters in log. */
 #define A_ENV_ANSI		"ansi"
+/** @const A_ENV_CRYPT_PWD	Environment variable for the encryption password. */
+#define A_ENV_CRYPT_PWD		"crypt_pwd"
+/** @const A_ENV_API_URL	Environment variable for the API base URL. */
+#define A_ENV_API_URL		"api_url"
+/** @const A_ENV_PARAM_URL	Environment variable for the parameter file's URL. */
+#define A_ENV_PARAM_URL		"param_url"
+/** @const A_ENV_PARAM_FILE	Environment variable for the parameter file's path. */
+#define A_ENV_PARAM_FILE	"param_file"
+/** @const A_ENV_DEBUG_MODE	Environment variable for the debug mode. */
+#define A_ENV_DEBUG_MODE	"debug"
 
 /* ********** DEFAULT PATHS ************ */
 /** @const A_PATH_ROOT		Arkiv root path. */
@@ -57,8 +73,8 @@
 #define A_PATH_ARCHIVES		"/var/archives"
 /** @const A_PATH_AGENT_CONFIG	Path to the configuration file. */
 #define A_PATH_AGENT_CONFIG	"/opt/arkiv/etc/agent.json"
-/** @const A_PATH_PARAMS	Path to the backup parameters file. */
-#define A_PATH_BACKUP_PARAMS	"/opt/arkiv/etc/backup.json"
+/** @const A_PATH_PARAM_FILE	Path to the backup parameters file. */
+#define A_PATH_PARAM_FILE	"/opt/arkiv/etc/param.json"
 /** @const A_PATH_LOGFILE	Path to the log file. */
 #define A_PATH_LOGFILE		"/var/log/arkiv.log"
 /** @const A_PATH_RCLONE	Path to the rclone executable file. */
@@ -97,41 +113,83 @@
 					"}\n"
 
 /* ********** JSON KEYS ********** */
-/** @const A_JSON_ORG_KEY	JSON key for organisation key. */
-#define A_JSON_ORG_KEY		"org_key"
 /** @const A_JSON_HOSTNAME	JSON key for hostname. */
 #define A_JSON_HOSTNAME		"hostname"
-/** @const A_JSON_ARCHIVES_PATH	JSON key for archives path. */
-#define A_JSON_ARCHIVES_PATH	"archives_path"
+/** @const A_JSON_STANDALONE	JSON key for standalone mode. */
+#define A_JSON_STANDALONE	"standalone"
+/** @const A_JSON_ORG_KEY	JSON key for organisation key. */
+#define A_JSON_ORG_KEY		"org_key"
 /** @const A_JSON_SCRIPTS	JSON key for pre- and post-scripts authorization. */
 #define A_JSON_SCRIPTS		"scripts"
+/** @const A_JSON_ARCHIVES_PATH	JSON key for archives path. */
+#define A_JSON_ARCHIVES_PATH	"archives_path"
 /** @const A_JSON_LOGFILE	JSON key for log file. */
 #define A_JSON_LOGFILE		"logfile"
 /** @const A_JSON_SYSLOG	JSON key for syslog. */
 #define A_JSON_SYSLOG		"syslog"
+/** @const A_JSON_STDOUT	JSON key for stdout. */
+#define A_JSON_STDOUT		"stdout"
+/** @const A_JSON_ANSI		JSON key for ANSI. */
+#define A_JSON_ANSI		"ansi"
 /** @const A_JSON_CRYPT_PWD	JSON key for encryption password. */
 #define A_JSON_CRYPT_PWD	"crypt_pwd"
+/** @const A_JSON_PARAM_URL	JSON key for the parameter file's URL. */
+#define A_JSON_PARAM_URL	"param_url"
+/** @const A_JSON_API_URL	JSON key for the API base URL. */
+#define A_JSON_API_URL		"api_url"
+/** @const A_JSON_PARAM_FILE	JSON key for the parameter file's path. */
+#define A_JSON_PARAM_FILE	"param_file"
+/** @const A_JSON_DEBUG_MODE	JSON key for the debug mode. */
+#define A_JSON_DEBUG_MODE	"debug"
 
 /* ********** SYSLOG STRINGS ********** */
 /** @const A_SYSLOG_IDENT	Syslog identity. */
 #define A_SYSLOG_IDENT		"arkiv_agent"
 
+/* ********** RCLONE DOWNLOAD URL ********** */
+#if defined ZIG_PLATFORM_LINUX_X86_32
+	/** @const A_RCLONE_DOWNLOAD_FILE	Rclone download filename. */
+	#define A_RCLONE_DOWNLOAD_FILE		"rclone-current-linux-386"
+#elif defined ZIG_PLATFORM_LINUX_X86_64
+	/** @const A_RCLONE_DOWNLOAD_FILE	Rclone download filename. */
+	#define A_RCLONE_DOWNLOAD_FILE		"rclone-current-linux-amd64"
+#elif defined ZIG_PLATFORM_LINUX_ARM_32
+	/** @const A_RCLONE_DOWNLOAD_FILE	Rclone download filename. */
+	#define A_RCLONE_DOWNLOAD_FILE		"rclone-current-linux-arm-v7"
+#elif defined ZIG_PLATFORM_LINUX_ARM_64
+	/** @const A_RCLONE_DOWNLOAD_FILE	Rclone download filename. */
+	#define A_RCLONE_DOWNLOAD_FILE		"rclone-current-linux-arm64"
+#elif defined ZIG_PLATFORM_MACOS_X86_64
+	/** @const A_RCLONE_DOWNLOAD_FILE	Rclone download filename. */
+	#define A_RCLONE_DOWNLOAD_FILE		"rclone-current-osx-amd64"
+#elif defined ZIG_PLATFORM_MACOS_ARM_64
+	/** @const A_RCLONE_DOWNLOAD_FILE	Rclone download filename. */
+	#define A_RCLONE_DOWNLOAD_FILE		"rclone-current-osx-arm64"
+#else
+	/** @const A_RCLONE_DOWNLOAD_FILE	Rclone download filename. */
+	#define A_RCLONE_DOWNLOAD_FILE		"rclone-current-linux-amd64"
+#endif
+
+/* ********** DOCUMENTATION ********** */
+/** @const A_DOCUMENTATION_URL	URL vers la documentation Arkiv. */
+#define A_DOCUMENTATION_URL	"https://doc.arkiv.sh/agent/install"
+
 /* ********** API URLS ********** */
 #ifdef DEV_MODE
 	/** @const A_API_URL_PARAMS		API URL used to get server parameters. Parameters: org key, server name. */
-	#define A_API_URL_SERVER_PARAMS		"https://conf-dev.arkiv.sh/v1/%s/%s/backup.json"
-	/** @const A_API_URL_SERVER_DECLARE	API URL for server declaration. */
-	#define A_API_URL_SERVER_DECLARE	"http://api.dev.arkiv.sh/v1/server/declare"
-	/** @const A_API_URL_BACKUP_REPORT	API URL for backup reporting. */
-	#define A_API_URL_BACKUP_REPORT		"http://api.dev.arkiv.sh/v1/backup/report"
+	#define A_API_URL_SERVER_PARAM		"https://conf-dev.arkiv.sh/v1/[ORG]/[HOST]/param.json"
+	/** @const A_API_BASE_URL		Base URL of the arkiv.sh API. */
+	#define A_API_BASE_URL			"http://api.dev.arkiv.sh/v1"
 #else
 	/** @const A_API_URL_PARAMS		API URL used to get server parameters. Parameters: org key, server name. */
-	#define A_API_URL_SERVER_PARAMS		"https://conf.arkiv.sh/v1/%s/%s/backup.json"
-	/** @const A_API_URL_SERVER_DECLARE	API URL for server declaration. */
-	#define A_API_URL_SERVER_DECLARE	"https://api.arkiv.sh/v1/server/declare"
-	/** @const A_API_URL_BACKUP_REPORT	API URL for backup reporting. */
-	#define A_API_URL_BACKUP_REPORT		"https://api.arkiv.sh/v1/backup/report"
+	#define A_API_URL_SERVER_PARAM		"https://conf.arkiv.sh/v1/[ORG]/[HOST]/param.json"
+	/** @const A_API_BASE_URL		Base URL of the arkiv.sh API. */
+	#define A_API_BASE_URL			"https://api.arkiv.sh/v1"
 #endif // DEV_MODE
+/** @const A_API_SERVER_DECLARE_SUFFIX	API suffix for server declaration. */
+#define A_API_SERVER_DECLARE_SUFFIX	"/server/declare"
+/** @const A_API_BACKUP_REPORT_SUFFIX	API suffix for backup reports. */
+#define A_API_BACKUP_REPORT_SUFFIX	"/backup/report"
 
 /* ********** CONFIGURATION VALUES ********** */
 /** @const A_ORG_KEY_LENGTH	 	Size of organization keys (45). */
@@ -327,15 +385,21 @@ typedef enum {
  * @field	backup_mysql_path		Path to the MySQL databases backup directory.
  * @field	backup_pgsql_path		Path to the PostgreSQL databases backup directory.
  * @field	backup_mongodb_path		Path to the MongoDB databases backup directory.
- * @field	conf.logfile			Log file's path.
- * @field	conf.archives_path		Root path to the local archives directory.
- * @field	conf.org_key			Organization key.
  * @field	conf.hostname			Hostname.
- * @field	conf.crypt_pwd			Encryption password.
+ * @field	conf.standalone			True if the standalone mode is enabled.
+ * @field	conf.org_key			Organization key.
  * @field	conf.scripts_allowed		True is pre- and post-scripts are allowed.
+ * @field	conf.archives_path		Root path to the local archives directory.
+ * @field	conf.logfile			Log file's path.
  * @field	conf.use_syslog			True if syslog is used.
  * @field	conf.use_stdout			True when log must be written on STDOUT.
  * @field	conf.use_ansi			False to disable ANSI escape sequences in log messages.
+ * @field	conf.crypt_pwd			Encryption password.
+ * @field	conf.param_url			URL to the parameter file.
+ * @field	conf.api_base_url		Base of API URL.
+ * @field	conf.param_file			Path to the local parameter file.
+ * @field	bin.rclone			Path to the rclone program.
+ * @field	bin.find			Path to the find program.
  * @field	bin.tar				Path to the tar program.
  * @field	bin.z				Path to the compression program.
  * @field	bin.crypt			Path to the encryption program.
@@ -381,17 +445,22 @@ typedef struct agent_s {
 	ystr_t backup_pgsql_path;
 	ystr_t backup_mongodb_path;
 	struct {
-		ystr_t logfile;
-		ystr_t archives_path;
-		ystr_t org_key;
 		ystr_t hostname;
-		ystr_t crypt_pwd;
+		bool standalone;
+		ystr_t org_key;
 		bool scripts_allowed;
+		ystr_t archives_path;
+		ystr_t logfile;
 		bool use_syslog;
 		bool use_stdout;
 		bool use_ansi;
+		ystr_t crypt_pwd;
+		ystr_t param_url;
+		ystr_t api_base_url;
+		ystr_t param_file;
 	} conf;
 	struct {
+		ystr_t rclone;
 		ystr_t find;
 		ystr_t tar;
 		ystr_t z;

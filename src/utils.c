@@ -66,9 +66,9 @@ void check_tar(void) {
 		return;
 	printf(YANSI_RED "Unable to find 'tar' program on this computer." YANSI_RESET "\n\n");
 	printf("Please, install " YANSI_GOLD "tar" YANSI_RESET " in a standard location ("
-	       YANSI_PURPLE "/bin/tar" YANSI_RESET ", " YANSI_PURPLE "/usr/bin/tar" YANSI_RESET " or "
-	       YANSI_PURPLE "/usr/local/bin/tar" YANSI_RESET ") and try again.\n");
-	printf(YANSI_FAINT "See " YANSI_LINK " for more information.\n\n" YANSI_RESET, "https://doc.arkiv.sh/agent/install", "the documentation");
+	       YANSI_PURPLE "/bin/tar" YANSI_RESET ", " YANSI_PURPLE "/usr/bin/tar" YANSI_RESET " or\n"
+	       YANSI_PURPLE "/usr/local/bin/tar" YANSI_RESET ") and try again.\n\n");
+	printf(YANSI_FAINT "See " YANSI_LINK " for more information.\n\n" YANSI_RESET, A_DOCUMENTATION_URL, "the documentation");
 	printf(YANSI_RED "Abort" YANSI_RESET "\n");
 	exit(2);
 }
@@ -80,7 +80,7 @@ void check_sha512sum(void) {
 	printf("Please, install " YANSI_GOLD "sha512sum" YANSI_RESET " in a standard location ("
 	       YANSI_PURPLE "/bin/sha512sum" YANSI_RESET ", " YANSI_PURPLE "/usr/bin/sha512sum" YANSI_RESET " or "
 	       YANSI_PURPLE "/usr/local/bin/sha512sum" YANSI_RESET ") and try again.\n");
-	printf(YANSI_FAINT "See " YANSI_LINK " for more information.\n\n" YANSI_RESET, "https://doc.arkiv.sh/agent/install", "the documentation");
+	printf(YANSI_FAINT "See " YANSI_LINK " for more information.\n\n" YANSI_RESET, A_DOCUMENTATION_URL, "the documentation");
 	printf(YANSI_RED "Abort" YANSI_RESET "\n");
 	exit(2);
 }
@@ -139,12 +139,12 @@ void check_crypt(void) {
 		exit(2);
 	}
 	printf("Here are the encryption software installed on this computer:\n");
-	printf("%s gpg      " YANSI_RESET, (hasGpg ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
-	printf(YANSI_FAINT "GNU's implementation of the OpenPGP standard\n" YANSI_RESET);
+	printf("%s openssl  " YANSI_RESET, (hasOpenssl ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
+	printf(YANSI_FAINT "The fastest, yet very secure\n" YANSI_RESET);
 	printf("%s scrypt   " YANSI_RESET, (hasScrypt ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
 	printf(YANSI_FAINT "Very secure; slow by design\n" YANSI_RESET);
-	printf("%s openssl  " YANSI_RESET, (hasOpenssl ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
-	printf(YANSI_FAINT "Not designed for encrypting large files\n" YANSI_RESET);
+	printf("%s gpg      " YANSI_RESET, (hasGpg ? (YANSI_GREEN "✓ (installed)     ") : (YANSI_RED "✘ (not installled)")));
+	printf(YANSI_FAINT "GNU's implementation of the OpenPGP standard\n" YANSI_RESET);
 	printf("\nDo you want to continue? [" YANSI_YELLOW "Y" YANSI_RESET "/" YANSI_YELLOW "n" YANSI_RESET "] " YANSI_BLUE);
 	fflush(stdout);
 	ystr_t ys = NULL;
@@ -224,5 +224,28 @@ void check_database_dump(void) {
 		printf(YANSI_RED "Abort." YANSI_RESET "\n");
 		exit(2);
 	}
+}
+/* Checks if the rclone program is installed. Aborts if not. */
+void check_rclone(void) {
+	if (check_program_exists("rclone"))
+		return;
+	printf(YANSI_RED "Unable to find 'rclone' program on this computer." YANSI_RESET "\n\n");
+	printf("Please, install " YANSI_GOLD "rclone" YANSI_RESET " in a standard location ("
+	       YANSI_PURPLE "/bin/rclone" YANSI_RESET ", " YANSI_PURPLE "/usr/bin/rclone" YANSI_RESET " or\n"
+	       YANSI_PURPLE "/usr/local/bin/rclone" YANSI_RESET ") and try again.\n\n");
+	printf("For example, you can use these commands:\n");
+	char *rclone_filename = A_RCLONE_DOWNLOAD_FILE;
+	if (check_program_exists("wget")) {
+		printf(YANSI_FAINT "  $ wget https://downloads.rclone.org/%s.zip\n"
+		       "  $ unzip %s.zip\n  $ cp %s/rclone /usr/local/bin/\n\n" YANSI_RESET,
+		       rclone_filename, rclone_filename, rclone_filename);
+	} else {
+		printf(YANSI_FAINT "  $ curl https://downloads.rclone.org/%s.zip -o %s.zip\n"
+		       "  $ unzip %s.zip\n  $ cp %s/rclone /usr/local/bin/\n\n" YANSI_RESET,
+		       rclone_filename, rclone_filename, rclone_filename, rclone_filename);
+	}
+	printf("See " YANSI_LINK " for more information.\n\n", A_DOCUMENTATION_URL, "the documentation");
+	printf(YANSI_RED "Abort" YANSI_RESET "\n");
+	exit(2);
 }
 

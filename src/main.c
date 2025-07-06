@@ -74,15 +74,23 @@ int main(int argc, char *argv[]) {
 		agent_load_configuration(agent, false);
 		// show debug data
 		ADEBUG_RAW(YANSI_NEGATIVE "------------------------- DEBUG VARIABLES -------------------------" YANSI_RESET);
-		ADEBUG_RAW("agent_path           : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->agent_path);
-		ADEBUG_RAW("conf_path            : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->conf_path);
-		ADEBUG_RAW("execution timestamp  : '" YANSI_FAINT "%.f" YANSI_RESET "'", difftime(agent->exec_timestamp, (time_t)0));
-		ADEBUG_RAW("conf.logfile         : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->conf.logfile);
-		ADEBUG_RAW("conf.archives_path   : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->conf.archives_path);
-		ADEBUG_RAW("conf.org_key         : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->conf.org_key);
-		ADEBUG_RAW("conf.hostname        : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->conf.hostname);
-		ADEBUG_RAW("conf.crypt_pwd       : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->conf.crypt_pwd);
-		ADEBUG_RAW("conf.use_syslog      : '" YANSI_FAINT "%s" YANSI_RESET "'", agent->conf.use_syslog ? "true" : "false");
+		ADEBUG_RAW("agent_path           : \"" YANSI_FAINT "%s" YANSI_RESET "\"", agent->agent_path);
+		ADEBUG_RAW("conf_path            : \"" YANSI_FAINT "%s" YANSI_RESET "\"", agent->conf_path);
+		ADEBUG_RAW("execution timestamp  : \"" YANSI_FAINT "%.f" YANSI_RESET "\"", difftime(agent->exec_timestamp, (time_t)0));
+		ADEBUG_RAW("conf.standalone      : " YANSI_FAINT "%s" YANSI_RESET, agent->conf.standalone ? "true" : "false");
+		ADEBUG_RAW("conf.hostname        : \"" YANSI_FAINT "%s" YANSI_RESET "\"", agent->conf.hostname);
+		ADEBUG_RAW("conf.org_key         : \"" YANSI_FAINT "%s" YANSI_RESET "\"", agent->conf.org_key);
+		ADEBUG_RAW("conf.scripts_allowed : " YANSI_FAINT "%s" YANSI_RESET, agent->conf.scripts_allowed ? "true" : "false");
+		ADEBUG_RAW("conf.archives_path   : \"" YANSI_FAINT "%s" YANSI_RESET "\"", agent->conf.archives_path);
+		ADEBUG_RAW("conf.logfile         : \"" YANSI_FAINT "%s" YANSI_RESET "\"", agent->conf.logfile);
+		ADEBUG_RAW("conf.use_syslog      : " YANSI_FAINT "%s" YANSI_RESET, agent->conf.use_syslog ? "true" : "false");
+		ADEBUG_RAW("conf.use_stdout      : " YANSI_FAINT "%s" YANSI_RESET, agent->conf.use_stdout ? "true" : "false");
+		ADEBUG_RAW("conf.use_ansi        : " YANSI_FAINT "%s" YANSI_RESET, agent->conf.use_ansi ? "true" : "false");
+		ADEBUG_RAW("conf.crypt_pwd       : \"" YANSI_FAINT "%s" YANSI_RESET "\"", agent->conf.crypt_pwd);
+		ADEBUG_RAW("conf.param_url       : \"" YANSI_FAINT "%s" YANSI_RESET "\"", agent->conf.param_url);
+		ADEBUG_RAW("conf.api_base_url    : \"" YANSI_FAINT "%s" YANSI_RESET "\"", agent->conf.api_base_url);
+		ADEBUG_RAW("conf.param_file      : \"" YANSI_FAINT "%s" YANSI_RESET "\"", agent->conf.param_file);
+		ADEBUG_RAW("\n");
 		// execution
 		if (exec_type == A_TYPE_DECLARE) {
 			// server declaration
@@ -165,15 +173,50 @@ void _agent_usage(const char *progname) {
 		YANSI_FAINT "  Specifies the path to the configuration file.\n" YANSI_RESET
 		"  Default value: " YANSI_CYAN "/opt/arkiv/etc/agent.json\n\n" YANSI_RESET
 
-		YANSI_BOLD "  hostname" YANSI_RESET "=host_name\n"
-		YANSI_FAINT "  Specifies the name of the local machine.\n"
-		"  Default value: " YANSI_FAINT "the output of the " YANSI_YELLOW "hostname" YANSI_RESET " program\n\n" YANSI_RESET
-
 		YANSI_BOLD "  standalone" YANSI_RESET "=true\n"
 		YANSI_FAINT "  Enables the standalone mode. The agent will use local configuration file\n" YANSI_RESET
-		YANSI_FAINT "  (see " YANSI_RESET YANSI_YELLOW "params" YANSI_RESET YANSI_FAINT ")\n" YANSI_RESET
-		YANSI_FAINT "  and will not connect to any external API.\n" YANSI_RESET
+		YANSI_FAINT "  (see " YANSI_RESET YANSI_YELLOW "local_paramter_file" YANSI_RESET YANSI_FAINT ") and will not connect to any external API.\n" YANSI_RESET
 		"  Default value: " YANSI_CYAN "false\n\n" YANSI_RESET
+
+		YANSI_BOLD "  hostname" YANSI_RESET "=host_name\n"
+		YANSI_FAINT "  Specifies the name of the local machine.\n"
+		"  Default value: " YANSI_FAINT "the output of the " YANSI_RESET YANSI_YELLOW "hostname" YANSI_RESET " program\n\n" YANSI_RESET
+
+		YANSI_BOLD "  org_key" YANSI_RESET "=...\n"
+		YANSI_FAINT "  45 characters-long organization key, provided by Arkiv.sh service (or another\n" YANSI_RESET
+		YANSI_FAINT "  compatible service).\n\n" YANSI_RESET
+
+		YANSI_BOLD "  scripts" YANSI_RESET "=false\n"
+		YANSI_FAINT "  Specifies whether pre- and post-execution scripts are allowed.\n" YANSI_RESET
+		"  Default value: " YANSI_CYAN "true\n\n" YANSI_RESET
+
+		YANSI_BOLD "  archives_path" YANSI_RESET "=/path/to/dir\n"
+		YANSI_FAINT "  Specifies the directory where local archives will be created.\n" YANSI_RESET
+		"  Default value: " YANSI_CYAN "/var/archives\n\n" YANSI_RESET
+
+		YANSI_BOLD "  logfile" YANSI_RESET "=/path/to/file.log\n"
+		YANSI_FAINT "  Use " YANSI_RESET YANSI_YELLOW "/dev/null" YANSI_RESET YANSI_FAINT " to disable file-based logging.\n" YANSI_RESET
+		"  Default value: " YANSI_CYAN "/var/log/arkiv.log\n\n" YANSI_RESET
+
+		YANSI_BOLD "  syslog" YANSI_RESET "=true\n"
+		YANSI_FAINT "  Enables logging to syslog in addition to other logging mechanisms.\n" YANSI_RESET
+		"  Default value: " YANSI_CYAN "false\n\n" YANSI_RESET
+
+		YANSI_BOLD "  stdout" YANSI_RESET "=true\n"
+		YANSI_FAINT "  Enables logging to the program's standard output.\n" YANSI_RESET
+		"  Default value: " YANSI_CYAN "false\n\n" YANSI_RESET
+
+		YANSI_BOLD "  ansi" YANSI_RESET "=false\n"
+		YANSI_FAINT "  Enables or disables ANSI color codes and formatting in the log file.\n" YANSI_RESET
+		"  Default value: " YANSI_CYAN "true\n\n" YANSI_RESET
+
+		YANSI_BOLD "  crypt_pwd" YANSI_RESET "=...(40 characters-long password)...\n"
+		YANSI_FAINT "  Overrides the encryption password defined in the configuration file.\n\n" YANSI_RESET
+
+		YANSI_BOLD "  api_url" YANSI_RESET "=https://url\n"
+		YANSI_FAINT "  Specifies the base URL of the server API, used to declare the host and to send\n" YANSI_RESET
+		YANSI_FAINT "  backup reports.\n" YANSI_RESET
+		"  Default value: " YANSI_CYAN "https://api.arkiv.sh/v1\n\n" YANSI_RESET
 
 		YANSI_BOLD "  param_url" YANSI_RESET "=https://url\n"
 		YANSI_FAINT "  Specifies the URL of the host parameter file. This URL may contain:\n" YANSI_RESET
@@ -181,43 +224,15 @@ void _agent_usage(const char *progname) {
 		YANSI_FAINT "  - " YANSI_RESET YANSI_YELLOW "[HOST]" YANSI_RESET YANSI_FAINT " for the host name\n" YANSI_RESET
 		"  Default value: " YANSI_CYAN "https://conf.arkiv.sh/v1/[ORG]/[HOST]/backup.json\n\n" YANSI_RESET
 
-		YANSI_BOLD "  api_url" YANSI_RESET "=https://url\n"
-		YANSI_FAINT "  Specifies the base URL of the server API, used to declare the host and to send\n" YANSI_RESET
-		YANSI_FAINT "  backup reports.\n" YANSI_RESET
-		"  Default value: " YANSI_CYAN "https://api.arkiv.sh/v1/\n\n" YANSI_RESET
-
-		YANSI_BOLD "  params" YANSI_RESET "=/path/to/params.json\n"
+		YANSI_BOLD "  param_file" YANSI_RESET "=/path/to/params.json\n"
 		YANSI_FAINT "  Specifies the path to the file used to store the host parameters.\n" YANSI_RESET
 		YANSI_FAINT "  It is used to store a copy of the fetched parameters (see " YANSI_RESET YANSI_YELLOW "param_url" YANSI_RESET YANSI_FAINT ") or to\n" YANSI_RESET
 		YANSI_FAINT "  store the used set of parameters (see " YANSI_RESET YANSI_YELLOW "standalone" YANSI_RESET YANSI_FAINT ")\n" YANSI_RESET
 		"  Default value: " YANSI_CYAN "/opt/arkiv/etc/backup.json\n\n" YANSI_RESET
 
-		YANSI_BOLD "  logfile" YANSI_RESET "=/path/to/file.log\n"
-		YANSI_FAINT "  Use " YANSI_RESET YANSI_YELLOW "/dev/null" YANSI_RESET YANSI_FAINT " to disable file-based logging.\n" YANSI_RESET
-		"  Default value: " YANSI_CYAN "/var/log/arkiv-agent.log\n\n" YANSI_RESET
-
-		YANSI_BOLD "  syslog" YANSI_RESET "=true\n"
-		YANSI_FAINT "  Enables logging to syslog in addition to other logging mechanisms.\n" YANSI_RESET
-		"  Default value: " YANSI_CYAN "false\n\n" YANSI_RESET
-
 		YANSI_BOLD "  debug" YANSI_RESET "=true\n"
 		YANSI_FAINT "  Sets the log level to DEBUG, causing the program to write more log messages.\n" YANSI_RESET
 		"  Default value: " YANSI_CYAN "false\n\n" YANSI_RESET
-
-		YANSI_BOLD "  stdout" YANSI_RESET "=true\n"
-		YANSI_FAINT "  Enables logging to the program's standard output.\n" YANSI_RESET
-		"  Default value: " YANSI_CYAN "false\n\n" YANSI_RESET
-
-		YANSI_BOLD "  archives_path" YANSI_RESET "=/path/to/dir\n"
-		YANSI_FAINT "  Specifies the directory where local archives will be created.\n" YANSI_RESET
-		"  Default value: " YANSI_CYAN "/var/archives\n\n" YANSI_RESET
-
-		YANSI_BOLD "  crypt_pwd" YANSI_RESET "=...(40 characters-long password)...\n"
-		YANSI_FAINT "  Overrides the encryption password defined in the configuration file.\n\n" YANSI_RESET
-
-		YANSI_BOLD "  ansi" YANSI_RESET "=false\n"
-		YANSI_FAINT "  Enables or disables ANSI color codes and formatting in the log file.\n" YANSI_RESET
-		"  Default value: " YANSI_CYAN "true\n\n" YANSI_RESET
 	);
 	printf(
 		YANSI_BG_GRAY YANSI_WHITE " Examples " YANSI_RESET "\n\n"
@@ -257,46 +272,52 @@ void _agent_usage(const char *progname) {
 		"  The configuration file is created by the Arkiv agent when run in " YANSI_YELLOW "config" YANSI_RESET " mode.\n"
 		"  In most cases, it should not be edited manually.\n"
 		"  By default, this file is stored at " YANSI_FAINT "/opt/arkiv/etc/agent.json" YANSI_RESET " but another\n"
-		"  location can be specified with the " YANSI_YELLOW "conf" YANSI_RESET "environment variable.\n\n"
+		"  location can be specified with the " YANSI_YELLOW "conf" YANSI_RESET " environment variable.\n\n"
 		"  " YANSI_BG_BLUE YANSI_LIME "                                                                              " YANSI_RESET "\n"
 		"  " YANSI_BG_BLUE YANSI_LIME "  {                                                                           " YANSI_RESET "\n"
-		"  " YANSI_BG_BLUE YANSI_LIME "      \"hostname\":      \"host_name\",                                           " YANSI_RESET "\n"
 		"  " YANSI_BG_BLUE YANSI_LIME "      \"standalone\":    false,                                                 " YANSI_RESET "\n"
+		"  " YANSI_BG_BLUE YANSI_LIME "      \"hostname\":      \"host_name\",                                           " YANSI_RESET "\n"
 		"  " YANSI_BG_BLUE YANSI_LIME "      \"org_key\":       \"organization key\",                                    " YANSI_RESET "\n"
 		"  " YANSI_BG_BLUE YANSI_LIME "      \"scripts\":       true,                                                  " YANSI_RESET "\n"
 		"  " YANSI_BG_BLUE YANSI_LIME "      \"archives_path\": \"/var/archives\",                                       " YANSI_RESET "\n"
-		"  " YANSI_BG_BLUE YANSI_LIME "      \"logfile\":       \"/var/log/arkiv\",                                      " YANSI_RESET "\n"
+		"  " YANSI_BG_BLUE YANSI_LIME "      \"logfile\":       \"/var/log/arkiv.log\",                                  " YANSI_RESET "\n"
 		"  " YANSI_BG_BLUE YANSI_LIME "      \"syslog\":        false,                                                 " YANSI_RESET "\n"
 		"  " YANSI_BG_BLUE YANSI_LIME "      \"stdout\":        false,                                                 " YANSI_RESET "\n"
 		"  " YANSI_BG_BLUE YANSI_LIME "      \"ansi\":          false,                                                 " YANSI_RESET "\n"
 		"  " YANSI_BG_BLUE YANSI_LIME "      \"crypt_pwd\":     \"encryption password\",                                 " YANSI_RESET "\n"
-		"  " YANSI_BG_BLUE YANSI_LIME "      \"param_url\":     \"https://conf.arkiv.sh/v1/[ORG]/[HOST]/backup.json\",   " YANSI_RESET "\n"
-		"  " YANSI_BG_BLUE YANSI_LIME "      \"api_url\":       \"https://api.arkiv.sh/v1/\",                            " YANSI_RESET "\n"
-		"  " YANSI_BG_BLUE YANSI_LIME "      \"debug\":         false,                                                 " YANSI_RESET "\n"
+		"  " YANSI_BG_BLUE YANSI_LIME "      \"api_url\":       \"https://api.arkiv.sh/v1\",                             " YANSI_RESET "\n"
+		"  " YANSI_BG_BLUE YANSI_LIME "      \"param_url\":     \"https://conf.arkiv.sh/v1/[ORG]/[HOST]/param.json\",    " YANSI_RESET "\n"
+		"  " YANSI_BG_BLUE YANSI_LIME "      \"param_file\":    \"/opt/arkiv/etc/param.json\",                           " YANSI_RESET "\n"
+		"  " YANSI_BG_BLUE YANSI_LIME "      \"debug\":         false                                                  " YANSI_RESET "\n"
 		"  " YANSI_BG_BLUE YANSI_LIME "  }                                                                           " YANSI_RESET "\n"
 		"  " YANSI_BG_BLUE YANSI_LIME "                                                                              " YANSI_RESET "\n"
 		"\n\n"
 	);
 	printf(
-		YANSI_BOLD "  hostname " YANSI_RESET YANSI_GREEN "(optional)" YANSI_RESET "\n"
-		YANSI_FAINT "  Name of the local host.\n" YANSI_RESET
-		"  Default value: " YANSI_FAINT "the output of the " YANSI_RESET YANSI_YELLOW "hostname" YANSI_RESET YANSI_FAINT " program\n\n" YANSI_RESET
-
 		YANSI_BOLD "  standalone " YANSI_RESET YANSI_GREEN "(optional)\n" YANSI_RESET
 		YANSI_FAINT "  Specifies wether standalone mode (no connection to a centralized service) is\n" YANSI_RESET
 		YANSI_FAINT "  enabled.\n" YANSI_RESET
 		"  Default value: " YANSI_CYAN "false\n\n" YANSI_RESET
 
+		YANSI_BOLD "  hostname " YANSI_RESET YANSI_GREEN "(optional)" YANSI_RESET "\n"
+		YANSI_FAINT "  Name of the local host.\n" YANSI_RESET
+		"  Default value: " YANSI_FAINT "the output of the " YANSI_RESET YANSI_YELLOW "hostname" YANSI_RESET YANSI_FAINT " program\n\n" YANSI_RESET
+
 		YANSI_BOLD "  org_key " YANSI_RESET YANSI_GREEN "(mandatory when not standalone)" YANSI_RESET "\n"
 		YANSI_FAINT "  45 characters-long organization key, provided by Arkiv.sh service (or another\n" YANSI_RESET
 		YANSI_FAINT "  compatible service).\n\n" YANSI_RESET
-		YANSI_BOLD "  scripts "YANSI_RESET YANSI_GREEN "(optional)" YANSI_RESET "\n"
-		YANSI_FAINT "  Specifies whether scripts may be executed before and after backup operations.\n" YANSI_RESET
+
+		YANSI_BOLD "  scripts " YANSI_RESET YANSI_GREEN "(optional)" YANSI_RESET "\n"
+		YANSI_FAINT "  Specifies whether pre- and post-execution scripts are allowed.\n" YANSI_RESET
 		"  Default value: " YANSI_CYAN "true\n\n" YANSI_RESET
 
 		YANSI_BOLD "  archives_path " YANSI_RESET YANSI_GREEN "(optional)" YANSI_RESET "\n"
 		YANSI_FAINT "  Specifies the directory where local archives will be created.\n" YANSI_RESET
 		"  Default value: " YANSI_CYAN "/var/archives\n\n" YANSI_RESET
+
+		YANSI_BOLD "  logfile " YANSI_RESET YANSI_GREEN "(optional)" YANSI_RESET "\n"
+		YANSI_FAINT "  Use " YANSI_RESET YANSI_YELLOW "/dev/null" YANSI_RESET YANSI_FAINT " to disable file-based logging.\n" YANSI_RESET
+		"  Default value: " YANSI_CYAN "/var/log/arkiv.log\n\n" YANSI_RESET
 
 		YANSI_BOLD "  syslog " YANSI_RESET YANSI_GREEN "(optional)\n" YANSI_RESET
 		YANSI_FAINT "  Enables logging to syslog in addition to other logging mechanisms.\n" YANSI_RESET
@@ -313,16 +334,22 @@ void _agent_usage(const char *progname) {
 		YANSI_BOLD "  crypt_pwd " YANSI_RESET YANSI_GREEN "(mandatory)\n" YANSI_RESET
 		YANSI_FAINT "  Password used to encrypt files.\n\n" YANSI_RESET
 
+		YANSI_BOLD "  api_url " YANSI_RESET YANSI_GREEN "(optional)\n" YANSI_RESET
+		YANSI_FAINT "  Specifies the base URL of the server API, used to declare the host and to send\n" YANSI_FAINT
+		YANSI_FAINT "  send backup reports.\n" YANSI_RESET
+		"  Default value: " YANSI_CYAN "https://api.arkiv.sh/v1\n\n" YANSI_RESET
+
 		YANSI_BOLD "  param_url " YANSI_RESET YANSI_GREEN "(optional)\n" YANSI_RESET
 		YANSI_FAINT "  Specifies the URL of the host parameter file. This URL may contain:\n" YANSI_RESET
 		YANSI_FAINT "  - " YANSI_RESET YANSI_YELLOW "[ORG]" YANSI_RESET YANSI_FAINT " for the organization key\n" YANSI_RESET
 		YANSI_FAINT "  - " YANSI_RESET YANSI_YELLOW "[HOST]" YANSI_RESET YANSI_FAINT " for the host name\n" YANSI_RESET
 		"  Default value: " YANSI_CYAN "https://conf.arkiv.sh/v1/[ORG]/[HOST]/backup.json\n\n" YANSI_RESET
 
-		YANSI_BOLD "  api_url " YANSI_RESET YANSI_GREEN "(optional)\n" YANSI_RESET
-		YANSI_FAINT "  Specifies the base URL of the server API, used to declare the host and to send\n" YANSI_FAINT
-		YANSI_FAINT "  send backup reports.\n" YANSI_RESET
-		"  Default value: " YANSI_CYAN "https://api.arkiv.sh/v1/\n\n" YANSI_RESET
+		YANSI_BOLD "  param_file " YANSI_RESET YANSI_GREEN "(optional)\n" YANSI_RESET
+		YANSI_FAINT "  Specifies the path to the file used to store the host parameters.\n" YANSI_RESET
+		YANSI_FAINT "  It is used to store a copy of the fetched parameters (see " YANSI_RESET YANSI_YELLOW "param_url" YANSI_RESET YANSI_FAINT ") or to\n" YANSI_RESET
+		YANSI_FAINT "  store the used set of parameters (see " YANSI_RESET YANSI_YELLOW "standalone" YANSI_RESET YANSI_FAINT ")\n" YANSI_RESET
+		"  Default value: " YANSI_CYAN "/opt/arkiv/etc/backup.json\n\n" YANSI_RESET
 
 		YANSI_BOLD "  debug " YANSI_RESET YANSI_GREEN "(optional)\n" YANSI_RESET
 		YANSI_FAINT "  Sets the log level to DEBUG, causing the program to write more log messages.\n" YANSI_RESET

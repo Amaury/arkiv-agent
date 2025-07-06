@@ -38,6 +38,8 @@ void exec_configuration(agent_t *agent) {
 	printf("\n");
 
 	/* programs check */
+	// rclone
+	check_rclone();
 	// tar
 	check_tar();
 	// sha512sum
@@ -127,8 +129,10 @@ static ystr_t config_ask_hostname(agent_t *agent) {
 	if (!ys_empty(agent->conf.hostname))
 		has_defined_hostname = true;
 	// fetch hostname
+	ystr_t path = get_program_path("hostname");
 	ybin_t data = {0};
-	ystatus_t res = yexec("/usr/bin/hostname", NULL, NULL, &data, NULL);
+	ystatus_t res = yexec((path ? path : "/usr/bin/hostname"), NULL, NULL, &data, NULL);
+	ys_free(path);
 	if (res == YENOERR) {
 		hostname = ys_copy(data.data);
 		ys_trim(hostname);

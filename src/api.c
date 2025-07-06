@@ -25,6 +25,7 @@ ystatus_t api_server_declare(agent_t *agent) {
 	char *orgKey = agent->conf.org_key;
 	ystatus_t st = YENOMEM;
 	ystr_t agentVersion = NULL;
+	ystr_t apiUrl = NULL;
 	yvar_t *var = NULL;
 	// GET parameter
 	ytable_t *params = ytable_create(1, NULL, NULL);
@@ -32,10 +33,15 @@ ystatus_t api_server_declare(agent_t *agent) {
 		goto cleanup;
 	ys_printf(&agentVersion, "%f", A_AGENT_VERSION);
 	ytable_set_key(params, "version", agentVersion);
+	// API URL
+	apiUrl = ys_new(agent->conf.api_base_url);
+	st = ys_append(&apiUrl, A_API_SERVER_DECLARE_SUFFIX);
+	if (st != YENOERR)
+		goto cleanup;
 	// API call
 	if (agent->debug_mode)
-		printf("URL called: %s\n", A_API_URL_SERVER_DECLARE);
-	yres_pointer_t res = api_call(A_API_URL_SERVER_DECLARE, hostname, orgKey, params, NULL, true);
+		printf("\nURL called: %s\n", apiUrl);
+	yres_pointer_t res = api_call(apiUrl, hostname, orgKey, params, NULL, true);
 	st = YRES_STATUS(res);
 	var = (yvar_t*)YRES_VAL(res);
 	if (st != YENOERR)
@@ -45,6 +51,7 @@ ystatus_t api_server_declare(agent_t *agent) {
 		goto cleanup;
 	}
 cleanup:
+	ys_free(apiUrl);
 	ys_free(agentVersion);
 	ytable_free(params);
 	yvar_delete(var);
@@ -54,6 +61,7 @@ cleanup:
 ystatus_t api_backup_report(agent_t *agent) {
 	ystatus_t st = YENOERR;
 	bool st_global = true;
+	ystr_t apiUrl = NULL;
 	yvar_t *report = yvar_new_table(NULL);
 	if (!report)
 		return (YENOMEM);
@@ -205,6 +213,12 @@ ystatus_t api_backup_report(agent_t *agent) {
 		if ((st = ytable_set_key(root, "st_db", var)) != YENOERR)
 			goto cleanup;
 	}
+	// API URL
+	apiUrl = ys_new(agent->conf.api_base_url);
+	if (!ys_append(&apiUrl, A_API_BACKUP_REPORT_SUFFIX)) {
+		st = YENOMEM;
+		goto cleanup;
+	}
 	// API call
 	if (agent->debug_mode) {
 		ystr_t ys = yjson_sprint(report, true);
@@ -214,7 +228,7 @@ ystatus_t api_backup_report(agent_t *agent) {
 		}
 	}
 	yres_pointer_t res = api_call(
-		A_API_URL_BACKUP_REPORT,
+		apiUrl,
 		agent->conf.hostname,
 		agent->conf.org_key,
 		NULL,
@@ -230,13 +244,14 @@ ystatus_t api_backup_report(agent_t *agent) {
 		goto cleanup;
 	}
 cleanup:
+	ys_free(apiUrl);
 	yvar_delete(report);
 	return (st);
 }
 /* Fetch a host's parameters file. */
 yvar_t *api_get_params_file(agent_t *agent) {
 	// forge URL
-	ystr_t url = ys_printf(NULL, A_API_URL_SERVER_PARAMS, agent->conf.org_key, agent->conf.hostname);
+	ystr_t url = ys_printf(NULL, A_API_URL_SERVER_PARAM, agent->conf.org_key, agent->conf.hostname);
 	ADEBUG("│ ├ " YANSI_FAINT "Download file: " YANSI_RESET "%s", url);
 	// fetch file
 	yres_pointer_t res = api_call(url, NULL, NULL, NULL, NULL, true);

@@ -51,7 +51,7 @@ yvar_t *api_get_params_file(agent_t *agent);
 	 * @param	user		Username (or NULL if no authentication is required).
 	 * @param	pwd		Password (or NULL if no authentication is required).
 	 * @param	params		GET parameters (or NULL if no parameters).
-	 * @param	post_data	POST data to serialize as JSON (or NULL is no data).
+	 * @param	post_data	POST data to serialize as JSON (or NULL if no data).
 	 * @param	asJson		True to process the response as a JSON stream.
 	 * @return	The result of the request. If the request is successful, the status is YENOERR.
 	 *		The value is a pointer to a yvar (a string or the result of the JSON deserialization).

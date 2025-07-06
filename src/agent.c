@@ -21,6 +21,8 @@
 #include "yvar.h"
 #include "yresult.h"
 #include "yjson.h"
+#include "yexec.h"
+#include "utils.h"
 #include "agent.h"
 
 /* Create a new agent structure. */
@@ -51,7 +53,7 @@ agent_t *agent_new(char *exe_path) {
 	ys_free(ys);
 	// manage ANSI parameter
 	ys = agent_getenv(A_ENV_ANSI, NULL);
-	agent->conf.use_ansi = !ys || !ys[0] || !STR_IS_FALSE(ys);
+	agent->conf.use_ansi = !STR_IS_FALSE(ys);
 	ys_free(ys);
 	return (agent);
 }
@@ -135,85 +137,247 @@ void agent_load_configuration(agent_t *agent, bool permissive) {
 		exit(3);
 	}
 	json = yvar_get_table(&json_var);
-	// get JSON values
-	yvar_t *hostname = ytable_get_key_data(json, A_JSON_HOSTNAME);
-	yvar_t *org_key = ytable_get_key_data(json, A_JSON_ORG_KEY);
-	yvar_t *archives_path = ytable_get_key_data(json, A_JSON_ARCHIVES_PATH);
-	yvar_t *scripts = ytable_get_key_data(json, A_JSON_SCRIPTS);
-	yvar_t *logfile = ytable_get_key_data(json, A_JSON_LOGFILE);
-	yvar_t *syslog = ytable_get_key_data(json, A_JSON_SYSLOG);
-	yvar_t *crypt_pwd = ytable_get_key_data(json, A_JSON_CRYPT_PWD);
-	// check hostname
-	if (!hostname || !yvar_is_string(hostname) || !(ys = yvar_get_string(hostname)) || ys_empty(ys)) {
-		if (permissive)
-			goto cleanup;
-		printf(YANSI_RED "Empty hostname in configuration file '%s'.\n" YANSI_RESET, agent->conf_path);
-		exit(3);
+	// manage hostname
+	ys = agent_getenv(A_ENV_HOSTNAME, NULL);
+	if (!ys_empty(ys)) {
+		// got hostname from environment
+		agent->conf.hostname = ys;
+	} else {
+		ys_delete(&ys); // in case of allocated but empty string
+		yvar_t *hostname = ytable_get_key_data(json, A_JSON_HOSTNAME);
+		if (yvar_is_string(hostname) && (ys = yvar_get_string(hostname)) && !ys_empty(ys)) {
+			// got hostname from configuration file
+			agent->conf.hostname = ys_copy(ys);
+		} else {
+			// get hostname from the system
+			ys = get_program_path("hostname");
+			ybin_t data = {0};
+			ystatus_t res = yexec((!ys_empty(ys) ? ys : "/usr/bin/hostname"), NULL, NULL, &data, NULL);
+			ys_delete(&ys);
+			ys = NULL;
+			if (res == YENOERR) {
+				ys = ys_copy(data.data);
+				ys_trim(ys);
+			}
+			ybin_delete_data(&data);
+			if (res != YENOERR || ys_empty(ys)) {
+				ys_delete(&ys);
+				if (permissive)
+					goto cleanup;
+				printf(YANSI_RED "Empty host name in configuration file '%s'." YANSI_RESET, agent->conf_path);
+				exit(3);
+			}
+			agent->conf.hostname = ys;
+		}
 	}
-	agent->conf.hostname = ys_copy(ys);
-	// check organization key
-	if (!org_key || !yvar_is_string(org_key) || !(ys = yvar_get_string(org_key)) || ys_empty(ys)) {
-		if (permissive)
-			goto cleanup;
-		printf(YANSI_RED "Empty organization key in configuration file '%s'.\n" YANSI_RESET, agent->conf_path);
-		exit(3);
+	// mmanage standalone mode
+	ys = agent_getenv(A_ENV_STANDALONE, NULL);
+	if (!ys_empty(ys)) {
+		// got value from environement
+		agent->conf.standalone = STR_IS_TRUE(ys) ? true : false;
+	} else {
+		yvar_t *standalone = ytable_get_key_data(json, A_JSON_STANDALONE);
+		if (yvar_is_bool(standalone)) {
+			// got value from configuration file
+			agent->conf.standalone = yvar_get_bool(standalone);
+		}
 	}
-	agent->conf.org_key = ys_copy(ys);
-	// check archives path
-	if (!archives_path || !yvar_is_string(archives_path) || !(ys = yvar_get_string(archives_path)) || ys_empty(ys)) {
-		if (permissive)
-			goto cleanup;
-		printf(YANSI_RED "Empty archives path in configuration file '%s'.\n" YANSI_RESET, agent->conf_path);
-		exit(3);
+	ys_delete(&ys);
+	// manage organization key
+	ys = agent_getenv(A_ENV_ORG_KEY, NULL);
+	if (!ys_empty(ys)) {
+		// got value from environment
+		agent->conf.org_key = ys;
+	} else {
+		ys_delete(&ys); // in case of allocated but empty string
+		// search value in the configuration file
+		yvar_t *org_key = ytable_get_key_data(json, A_JSON_ORG_KEY);
+		if (!yvar_is_string(org_key) || !(ys = yvar_get_string(org_key)) || ys_empty(ys)) {
+			// not found
+			if (permissive)
+				goto cleanup;
+			printf(YANSI_RED "Empty organization key in configuration file '%s'.\n" YANSI_RESET, agent->conf_path);
+			exit(3);
+		}
+		agent->conf.org_key = ys_copy(ys);
 	}
-	agent->conf.archives_path = agent_getenv_static(A_ENV_ARCHIVES_PATH, ys);
-	// check pre- and post-scripts authorization
-	if (!scripts || !yvar_is_bool(scripts) || yvar_get_bool(scripts) == true) {
-		agent->conf.scripts_allowed = true;
+	// manage scripts authorization
+	ys = agent_getenv(A_ENV_SCRIPTS, NULL);
+	if (!ys_empty(ys)) {
+		// got value from environment
+		agent->conf.scripts_allowed = STR_IS_TRUE(ys) ? true : false;
+		ys_delete(&ys);
+	} else {
+		ys_delete(&ys); // in case of allocated but empty string
+		yvar_t *scripts = ytable_get_key_data(json, A_JSON_SCRIPTS);
+		if (yvar_is_bool(scripts)) {
+			// got value from configuration file
+			agent->conf.scripts_allowed = yvar_get_bool(scripts);
+		} else {
+			// default value
+			agent->conf.scripts_allowed = true;
+		}
 	}
-	// check encryption password
-	if (!crypt_pwd || !yvar_is_string(crypt_pwd) || !(ys = yvar_get_string(crypt_pwd)) || ys_empty(ys)) {
-		if (permissive)
-			goto cleanup;
-		printf(YANSI_RED "Empty encryption password in configuration file '%s'.\n" YANSI_RESET, agent->conf_path);
-		exit(3);
+	// manage archives path
+	ys = agent_getenv(A_ENV_ARCHIVES_PATH, NULL);
+	if (!ys_empty(ys)) {
+		// get value from environment
+		agent->conf.archives_path = ys;
+	} else {
+		ys_delete(&ys); // in case of allocated but empty string
+		// search value in the configuration file
+		yvar_t *archives_path = ytable_get_key_data(json, A_JSON_ARCHIVES_PATH);
+		if (!yvar_is_string(archives_path) || !(ys = yvar_get_string(archives_path)) || ys_empty(ys)) {
+			if (permissive)
+				goto cleanup;
+			printf(YANSI_RED "Empty archives path in configuration file '%s'.\n" YANSI_RESET, agent->conf_path);
+			exit(3);
+		}
+		agent->conf.archives_path = ys_copy(ys);
 	}
-	agent->conf.crypt_pwd = agent_getenv_static(A_ENV_CRYPT_PWD, ys);
-	// check logfile and initialize log's file descriptor
-	if (!logfile || !yvar_is_string(logfile) || !(ys = yvar_get_string(logfile)) || ys_empty(ys)) {
-		// no log file - write to stdout
-		agent->conf.logfile = NULL;
+	// manage logfile and initialize log's file descriptor
+	ys = agent_getenv(A_ENV_LOGFILE, NULL);
+	if (!ys_empty(ys)) {
+		// got value from environment
+		agent->conf.logfile = ys;
+	} else {
+		ys_delete(&ys); // in case of allocated but empty string
+		yvar_t *logfile = ytable_get_key_data(json, A_JSON_LOGFILE);
+		if (yvar_is_string(logfile) && (ys = yvar_get_string(logfile)) && !ys_empty(ys)) {
+			// got value from configuration file
+			agent->conf.logfile = ys_copy(ys);
+		} else {
+			// default value
+			agent->conf.logfile = ys_copy(A_PATH_LOGFILE);
+		}
+	}
+	if (!agent->conf.logfile || !strcmp(agent->conf.logfile, "/dev/null") ||
+	    !(agent->log_fd = fopen(agent->conf.logfile, "a"))) {
+		ys_delete(&agent->conf.logfile);
 		agent->log_fd = NULL;
 		agent->conf.use_stdout = true;
-	} else {
-		agent->conf.logfile = agent_getenv_static(A_ENV_ARCHIVES_PATH, ys);
-		agent->log_fd = fopen(agent->conf.logfile, "a");
-		if (!agent->log_fd)
-			agent->conf.use_stdout = true;
 	}
-	// check stdout
-	ys = agent_getenv(A_ENV_STDOUT, NULL);
-	if (ys) {
-		if (STR_IS_TRUE(ys))
-			agent->conf.use_stdout = true;
-		else
-			agent->conf.use_stdout = false;
-		ys_free(ys);
-	}
-	// check syslog and initialize syslog connection
-	ys = agent_getenv(A_ENV_SYSLOG, NULL);
+	// manage syslog and initialize syslog connection
 	enum { A_SYSLOG_UNDEF, A_SYSLOG_FORCE, A_SYSLOG_AVOID } use_syslog = A_SYSLOG_UNDEF;
-	if (ys) {
-		if (STR_IS_TRUE(ys))
-			use_syslog = A_SYSLOG_FORCE;
-		else
-			use_syslog = A_SYSLOG_AVOID;
-		ys_free(ys);
+	ys = agent_getenv(A_ENV_SYSLOG, NULL);
+	if (!ys_empty(ys)) {
+		use_syslog = STR_IS_TRUE(ys) ? A_SYSLOG_FORCE : A_SYSLOG_AVOID;
+	} else {
+		ys_delete(&ys); // in case of allocated but empty string
+		yvar_t *syslog = ytable_get_key_data(json, A_JSON_SYSLOG);
+		if (yvar_is_bool(syslog))
+			use_syslog = yvar_get_bool(syslog) ? A_SYSLOG_FORCE : A_SYSLOG_AVOID;
 	}
-	if (use_syslog == A_SYSLOG_FORCE ||
-	    (use_syslog == A_SYSLOG_UNDEF && syslog && yvar_is_bool(syslog) && yvar_get_bool(syslog) == true)) {
+	if (use_syslog == A_SYSLOG_FORCE) {
 		agent->conf.use_syslog = true;
 		openlog(A_SYSLOG_IDENT, LOG_CONS, LOG_USER);
+	}
+	// manage stdout
+	ys = agent_getenv(A_ENV_STDOUT, NULL);
+	if (!ys_empty(ys)) {
+		// got value from environment
+		agent->conf.use_stdout = STR_IS_TRUE(ys) ? true : false;
+		ys_free(ys);
+	} else {
+		ys_delete(&ys); // in case of allocated but empty string
+		yvar_t *var = ytable_get_key_data(json, A_JSON_STDOUT);
+		if (yvar_is_bool(var)) {
+			// got value from configuration file
+			agent->conf.use_stdout = yvar_get_bool(var);
+		}
+	}
+	// manage ANSI only if it wasn't overridden by environment in agent_new()
+	if (agent->conf.use_ansi) {
+		yvar_t *var = ytable_get_key_data(json, A_JSON_ANSI);
+		if (yvar_is_bool(var)) {
+			// got value from configuration file
+			agent->conf.use_ansi = yvar_get_bool(var);
+		}
+	}
+	// manage encryption password
+	ys = agent_getenv(A_ENV_CRYPT_PWD, NULL);
+	if (!ys_empty(ys)) {
+		// got value from environment
+		agent->conf.crypt_pwd = ys;
+	} else {
+		ys_delete(&ys); // in case of allocated but empty string
+		// search value in the configuration file
+		yvar_t *var = ytable_get_key_data(json, A_JSON_CRYPT_PWD);
+		if (!yvar_is_string(var) || !(ys = yvar_get_string(var)) || ys_empty(ys)) {
+			if (permissive)
+				goto cleanup;
+			printf(YANSI_RED "Empty encryption password in configuration file '%s'.\n" YANSI_RESET, agent->conf_path);
+			exit(3);
+		}
+		agent->conf.crypt_pwd = ys_copy(ys);
+	}
+	// manage API base URL
+	ys = agent_getenv(A_ENV_API_URL, NULL);
+	if (!ys_empty(ys)) {
+		// got value from environment
+		agent->conf.api_base_url = ys;
+	} else {
+		ys_delete(&ys); // in case of allocated but empty string
+		yvar_t *var = ytable_get_key_data(json, A_JSON_API_URL);
+		if (yvar_is_string(var) && (ys = yvar_get_string(var)) && !ys_empty(ys)) {
+			// got value from the configuration file
+			agent->conf.api_base_url = ys_copy(ys);
+		} else {
+			// use default value
+			agent->conf.api_base_url = ys_copy(A_API_BASE_URL);
+		}
+	}
+	// manage parameter file's URL
+	ys = agent_getenv(A_ENV_PARAM_URL, NULL);
+	if (!ys_empty(ys)) {
+		// got value from environment
+		agent->conf.param_url = ys;
+	} else {
+		ys_delete(&ys); // in case of allocated but empty string
+		yvar_t *var = ytable_get_key_data(json, A_JSON_PARAM_URL);
+		if (yvar_is_string(var) && (ys = yvar_get_string(var)) && !ys_empty(ys)) {
+			// got value from the configuration file
+			agent->conf.param_url = ys_copy(ys);
+		} else {
+			// use default value
+			agent->conf.param_url = ys_copy(A_API_URL_SERVER_PARAM);
+		}
+	}
+	if (!ys_empty(agent->conf.param_url) && strstr(agent->conf.param_url, "[ORG]") && !ys_empty(agent->conf.org_key)) {
+		// replace "[ORG]" in the URL
+		ys = ys_subs(agent->conf.param_url, "[ORG]", agent->conf.org_key);
+		ys_free(agent->conf.param_url);
+		agent->conf.param_url = ys;
+	}
+	if (!ys_empty(agent->conf.param_url) && strstr(agent->conf.param_url, "[HOST]") && !ys_empty(agent->conf.hostname)) {
+		// replace "[HOST]" in the URL
+		ys = ys_subs(agent->conf.param_url, "[HOST]", agent->conf.hostname);
+		ys_free(agent->conf.param_url);
+		agent->conf.param_url = ys;
+	}
+	// manage local parameter file's path
+	ys = agent_getenv(A_ENV_PARAM_FILE, NULL);
+	if (!ys_empty(ys)) {
+		// got value from environment
+		agent->conf.param_file = ys;
+	} else {
+		ys_delete(&ys); // in case of allocated but empty string
+		yvar_t *var = ytable_get_key_data(json, A_JSON_PARAM_FILE);
+		if (yvar_is_string(var) && (ys = yvar_get_string(var)) && !ys_empty(ys)) {
+			// got value from the configuration file
+			agent->conf.param_file = ys_copy(ys);
+		} else {
+			// use default value
+			agent->conf.param_file = ys_copy(A_PATH_PARAM_FILE);
+		}
+	}
+	// manage debug mode only if it wasn't overridden by environment in agent_new()
+	if (!agent->debug_mode) {
+		yvar_t *var = ytable_get_key_data(json, A_JSON_DEBUG_MODE);
+		if (yvar_is_bool(var)) {
+			// got value from configuration file
+			agent->debug_mode = yvar_get_bool(var);
+		}
 	}
 cleanup:
 	ytable_free(json);

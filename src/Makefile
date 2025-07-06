@@ -50,11 +50,11 @@ EXEOPT	= -O3 # -g for debug
 
 CC		  = gcc
 ZIG		  = zig
-CC_LINUX_X86_32	  = $(ZIG) cc -target x86-linux-musl
-CC_LINUX_X86_64	  = $(ZIG) cc -target x86_64-linux-musl
-CC_LINUX_ARM_32	  = $(ZIG) cc -target arm-linux-musleabi
-CC_LINUX_ARM_64	  = $(ZIG) cc -target aarch64-linux-musl
-CC_LINUX_RISCV_64 = $(ZIG) cc -target riscv64-linux-musl
+CC_LINUX_X86_32	  = $(ZIG) cc -target x86-linux-musl -DZIG_PLATFORM_LINUX_X86_32
+CC_LINUX_X86_64	  = $(ZIG) cc -target x86_64-linux-musl -DZIG_PLATFORM_LINUX_X86_64
+CC_LINUX_ARM_32	  = $(ZIG) cc -target arm-linux-musleabi -DZIG_PLATFORM_LINUX_ARM_32
+CC_LINUX_ARM_64	  = $(ZIG) cc -target aarch64-linux-musl -DZIG_PLATFORM_LINUX_ARM_64
+CC_LINUX_RISCV_64 = $(ZIG) cc -target riscv64-linux-musl -DZIG_PLATFORM_LINUX_RISCV_64
 CC_MACOS_X86_64	  = $(ZIG) cc -target x86_64-macos-none -DZIG_PLATFORM_MACOS_X86_64
 CC_MACOS_ARM_64	  = $(ZIG) cc -target aarch64-macos-none -DZIG_PLATFORM_MACOS_ARM_64
 
